@@ -74,13 +74,20 @@ class TaskGroupDetailScreen extends StatelessWidget {
   }
 }
 
-class UnitCard extends StatelessWidget {
+class UnitCard extends StatefulWidget {
   final Unit unit;
 
   const UnitCard({
     super.key,
     required this.unit,
   });
+
+  @override
+  State<UnitCard> createState() => _UnitCardState();
+}
+
+class _UnitCardState extends State<UnitCard> {
+  int currentHealth = 20;  // Start at full health
 
   @override
   Widget build(BuildContext context) {
@@ -92,23 +99,57 @@ class UnitCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              unit.name,
+              widget.unit.name,
               style: Theme.of(context).textTheme.headlineSmall,
             ),
-            const SizedBox(height: 8),
-            Text('Type: ${unit.type.name}'),
+            const SizedBox(height: 16),
+            // Health tracking row
+            Container(
+              height: 40,
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Row(
+                children: List.generate(20, (index) {
+                  return GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        currentHealth = 20 - index;  // Convert index to health value
+                      });
+                    },
+                    child: Container(
+                      width: (MediaQuery.of(context).size.width - 64) / 20,  // Responsive width
+                      decoration: BoxDecoration(
+                        border: Border(
+                          right: BorderSide(
+                            color: Colors.grey,
+                            width: index < 19 ? 1 : 0,  // No border on last square
+                          ),
+                        ),
+                        color: index >= (20 - currentHealth) 
+                            ? Colors.transparent
+                            : Colors.black,  // Black marker for current health
+                      ),
+                    ),
+                  );
+                }),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text('Type: ${widget.unit.type.name}'),
             const Divider(),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _StatBox(label: 'Attack', value: unit.attack),
-                _StatBox(label: 'Defense', value: unit.defense),
-                _StatBox(label: 'Movement', value: unit.movement),
+                _StatBox(label: 'Attack', value: widget.unit.attack),
+                _StatBox(label: 'Defense', value: widget.unit.defense),
+                _StatBox(label: 'Movement', value: widget.unit.movement),
               ],
             ),
             const Divider(),
             Text(
-              'Special: ${unit.special}',
+              'Special: ${widget.unit.special}',
               style: Theme.of(context).textTheme.bodyLarge,
             ),
           ],
