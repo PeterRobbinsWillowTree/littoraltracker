@@ -87,7 +87,59 @@ class UnitCard extends StatefulWidget {
 }
 
 class _UnitCardState extends State<UnitCard> {
-  int currentHealth = 20;  // Start at full health
+  int currentHealth = 20;
+
+  Widget _buildHealthTracker() {
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Column(
+        children: List.generate(4, (row) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 2),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: List.generate(5, (col) {
+                final number = 20 - (row * 5 + col);
+                return GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      currentHealth = number;
+                    });
+                  },
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    margin: const EdgeInsets.symmetric(horizontal: 2),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey),
+                      color: number >= currentHealth 
+                          ? Colors.transparent 
+                          : Colors.black,
+                    ),
+                    child: Center(
+                      child: Text(
+                        number.toString(),
+                        style: TextStyle(
+                          color: number >= currentHealth 
+                              ? Colors.black 
+                              : Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }),
+            ),
+          );
+        }),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -103,39 +155,7 @@ class _UnitCardState extends State<UnitCard> {
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             const SizedBox(height: 16),
-            // Health tracking row
-            Container(
-              height: 40,
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey),
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Row(
-                children: List.generate(20, (index) {
-                  return GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        currentHealth = 20 - index;  // Convert index to health value
-                      });
-                    },
-                    child: Container(
-                      width: (MediaQuery.of(context).size.width - 64) / 20,  // Responsive width
-                      decoration: BoxDecoration(
-                        border: Border(
-                          right: BorderSide(
-                            color: Colors.grey,
-                            width: index < 19 ? 1 : 0,  // No border on last square
-                          ),
-                        ),
-                        color: index >= (20 - currentHealth) 
-                            ? Colors.transparent
-                            : Colors.black,  // Black marker for current health
-                      ),
-                    ),
-                  );
-                }),
-              ),
-            ),
+            _buildHealthTracker(),
             const SizedBox(height: 16),
             Text('Type: ${widget.unit.type.name}'),
             const Divider(),
