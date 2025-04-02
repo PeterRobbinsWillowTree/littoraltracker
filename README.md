@@ -1,16 +1,42 @@
-# littoraltracker
+# Littoral Tracker
 
-A new Flutter project.
+A Flutter application for tracking units and task groups in Littoral Commander scenarios.
+
+## Features
+
+### Task Group Management
+- View list of task groups
+- Navigate to detailed task group view
+- Each task group can manage up to 4 units
+
+### Unit Management
+- Track unit health (20-point system)
+- Display unit statistics:
+  - Attack value
+  - Defense value
+  - Movement value
+- Show unit type (Infantry, Armor, Artillery, Air)
+- Display special abilities
+- Interactive health tracking with tap-to-set functionality
+
+## Development Status
+
+Current implementation includes:
+- Basic task group listing
+- Unit card display with mock data
+- Health tracking system
+- Material 3 design implementation
 
 ## Getting Started
 
-This project is a starting point for a Flutter application.
+1. Clone the repository
+2. Ensure Flutter is installed and up to date
+3. Run `flutter pub get` to install dependencies
+4. Use `flutter run` to start the application
 
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Future Features
+- Persistent storage for task groups and units
+- Unit creation and editing
+- Additional unit statistics and capabilities
+- Battle damage resolution helpers
+- Scenario management
