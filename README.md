@@ -1,42 +1,75 @@
 # Littoral Tracker
 
-A Flutter application for tracking units and task groups in Littoral Commander scenarios.
+A Flutter application for tracking units and their status in wargaming scenarios.
 
 ## Features
 
-### Task Group Management
-- View list of task groups
-- Navigate to detailed task group view
-- Each task group can manage up to 4 units
+### Scenarios
+- Create, edit, and delete scenarios
+- Organize scenarios by faction (USMC or PLA)
+- View scenario statistics (task groups, units, markers)
+- Import/export scenarios as JSON files
+- Duplicate existing scenarios
 
-### Unit Management
-- Track unit health (20-point system)
-- Display unit statistics:
+### Task Groups
+- Create, edit, and delete task groups within scenarios
+- Organize task groups by faction
+- View all units within a task group
+
+### Units
+- Create, edit, and delete units within task groups
+- Track unit attributes:
+  - Name
+  - Type
   - Attack value
   - Defense value
   - Movement value
-- Show unit type (Infantry, Armor, Artillery, Air)
-- Display special abilities
-- Interactive health tracking with tap-to-set functionality
+  - Special abilities
 
-## Development Status
-
-Current implementation includes:
-- Basic task group listing
-- Unit card display with mock data
-- Health tracking system
-- Material 3 design implementation
+### Markers
+- Place multiple colored markers on unit positions
+- Each color can only exist once per unit
+- Markers persist between sessions
+- Visual representation of unit status
 
 ## Getting Started
 
 1. Clone the repository
-2. Ensure Flutter is installed and up to date
-3. Run `flutter pub get` to install dependencies
-4. Use `flutter run` to start the application
+2. Install dependencies:
+   ```bash
+   flutter pub get
+   ```
+3. Run the app:
+   ```bash
+   flutter run
+   ```
 
-## Future Features
-- Persistent storage for task groups and units
-- Unit creation and editing
-- Additional unit statistics and capabilities
-- Battle damage resolution helpers
-- Scenario management
+## Dependencies
+
+- `sqflite`: For local database storage
+- `path`: For file path handling
+- `path_provider`: For accessing device storage
+- `intl`: For date formatting
+- `share_plus`: For file sharing
+- `file_picker`: For file selection
+
+## Data Structure
+
+The app uses SQLite for data persistence with the following tables:
+
+- `scenarios`: Stores scenario information
+- `task_groups`: Stores task group information with scenario references
+- `units`: Stores unit information with task group references
+- `unit_markers`: Stores marker positions and colors with unit references
+
+## Import/Export
+
+Scenarios can be exported as JSON files and imported back into the app. The export includes:
+- Scenario details
+- All task groups
+- All units
+- All markers
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
