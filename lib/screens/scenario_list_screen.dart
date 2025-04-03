@@ -1,47 +1,41 @@
 import 'package:flutter/material.dart';
-import '../models/task_group.dart';
 import '../models/scenario.dart';
 import '../database/database_helper.dart';
-import 'task_group_detail_screen.dart';
+import 'task_group_list_screen.dart';
 
-class TaskGroupListScreen extends StatefulWidget {
-  final Scenario scenario;
-
-  const TaskGroupListScreen({
-    super.key,
-    required this.scenario,
-  });
+class ScenarioListScreen extends StatefulWidget {
+  const ScenarioListScreen({super.key});
 
   @override
-  State<TaskGroupListScreen> createState() => _TaskGroupListScreenState();
+  State<ScenarioListScreen> createState() => _ScenarioListScreenState();
 }
 
-class _TaskGroupListScreenState extends State<TaskGroupListScreen> {
+class _ScenarioListScreenState extends State<ScenarioListScreen> {
   final DatabaseHelper _dbHelper = DatabaseHelper.instance;
-  List<TaskGroup> _taskGroups = [];
+  List<Scenario> _scenarios = [];
   bool _isLoading = false;
   String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
-    _loadTaskGroups();
+    _loadScenarios();
   }
 
-  Future<void> _loadTaskGroups() async {
+  Future<void> _loadScenarios() async {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
 
     try {
-      final taskGroupMaps = await _dbHelper.getTaskGroupsForScenario(widget.scenario.id);
+      final scenarioMaps = await _dbHelper.getAllScenarios();
       setState(() {
-        _taskGroups = taskGroupMaps.map((map) => TaskGroup.fromMap(map)).toList();
+        _scenarios = scenarioMaps.map((map) => Scenario.fromMap(map)).toList();
       });
     } catch (e) {
       setState(() {
-        _errorMessage = 'Failed to load task groups: ${e.toString()}';
+        _errorMessage = 'Failed to load scenarios: ${e.toString()}';
       });
     } finally {
       setState(() {
@@ -50,37 +44,34 @@ class _TaskGroupListScreenState extends State<TaskGroupListScreen> {
     }
   }
 
-  Future<void> _createTaskGroup() async {
+  Future<void> _createScenario() async {
     final result = await showDialog<Map<String, String>>(
       context: context,
-      builder: (context) => CreateTaskGroupDialog(
-        faction: widget.scenario.faction,
-      ),
+      builder: (context) => const CreateScenarioDialog(),
     );
 
     if (result != null) {
       try {
-        await _dbHelper.createTaskGroup(
-          scenarioId: widget.scenario.id,
+        await _dbHelper.createScenario(
           name: result['name']!,
-          faction: widget.scenario.faction,
+          faction: result['faction']!,
           description: result['description'],
         );
-        await _loadTaskGroups();
+        await _loadScenarios();
       } catch (e) {
         setState(() {
-          _errorMessage = 'Failed to create task group: ${e.toString()}';
+          _errorMessage = 'Failed to create scenario: ${e.toString()}';
         });
       }
     }
   }
 
-  Future<void> _deleteTaskGroup(TaskGroup taskGroup) async {
+  Future<void> _deleteScenario(Scenario scenario) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Task Group'),
-        content: Text('Are you sure you want to delete "${taskGroup.name}"?'),
+        title: const Text('Delete Scenario'),
+        content: Text('Are you sure you want to delete "${scenario.name}"?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -96,11 +87,11 @@ class _TaskGroupListScreenState extends State<TaskGroupListScreen> {
 
     if (confirmed == true) {
       try {
-        await _dbHelper.deleteTaskGroup(taskGroup.id);
-        await _loadTaskGroups();
+        await _dbHelper.deleteScenario(scenario.id);
+        await _loadScenarios();
       } catch (e) {
         setState(() {
-          _errorMessage = 'Failed to delete task group: ${e.toString()}';
+          _errorMessage = 'Failed to delete scenario: ${e.toString()}';
         });
       }
     }
@@ -110,11 +101,11 @@ class _TaskGroupListScreenState extends State<TaskGroupListScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.scenario.name),
+        title: const Text('Scenarios'),
         actions: [
           IconButton(
             icon: const Icon(Icons.add),
-            onPressed: _createTaskGroup,
+            onPressed: _createScenario,
           ),
         ],
       ),
@@ -122,25 +113,33 @@ class _TaskGroupListScreenState extends State<TaskGroupListScreen> {
           ? const Center(child: CircularProgressIndicator())
           : _errorMessage != null
               ? Center(child: Text(_errorMessage!))
-              : _taskGroups.isEmpty
-                  ? const Center(child: Text('No task groups found'))
+              : _scenarios.isEmpty
+                  ? const Center(child: Text('No scenarios found'))
                   : ListView.builder(
-                      itemCount: _taskGroups.length,
+                      itemCount: _scenarios.length,
                       itemBuilder: (context, index) {
-                        final taskGroup = _taskGroups[index];
+                        final scenario = _scenarios[index];
                         return ListTile(
-                          title: Text(taskGroup.name),
-                          subtitle: Text(taskGroup.description ?? ''),
+                          leading: Icon(
+                            scenario.faction == 'USMC'
+                                ? Icons.flag
+                                : Icons.flag_outlined,
+                            color: scenario.faction == 'USMC'
+                                ? Colors.blue
+                                : Colors.red,
+                          ),
+                          title: Text(scenario.name),
+                          subtitle: Text(scenario.description ?? ''),
                           trailing: IconButton(
                             icon: const Icon(Icons.delete),
-                            onPressed: () => _deleteTaskGroup(taskGroup),
+                            onPressed: () => _deleteScenario(scenario),
                           ),
                           onTap: () {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => TaskGroupDetailScreen(
-                                  taskGroup: taskGroup,
+                                builder: (context) => TaskGroupListScreen(
+                                  scenario: scenario,
                                 ),
                               ),
                             );
@@ -152,22 +151,18 @@ class _TaskGroupListScreenState extends State<TaskGroupListScreen> {
   }
 }
 
-class CreateTaskGroupDialog extends StatefulWidget {
-  final String faction;
-
-  const CreateTaskGroupDialog({
-    super.key,
-    required this.faction,
-  });
+class CreateScenarioDialog extends StatefulWidget {
+  const CreateScenarioDialog({super.key});
 
   @override
-  State<CreateTaskGroupDialog> createState() => _CreateTaskGroupDialogState();
+  State<CreateScenarioDialog> createState() => _CreateScenarioDialogState();
 }
 
-class _CreateTaskGroupDialogState extends State<CreateTaskGroupDialog> {
+class _CreateScenarioDialogState extends State<CreateScenarioDialog> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
+  String _selectedFaction = 'USMC';
 
   @override
   void dispose() {
@@ -179,7 +174,7 @@ class _CreateTaskGroupDialogState extends State<CreateTaskGroupDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Create Task Group'),
+      title: const Text('Create Scenario'),
       content: Form(
         key: _formKey,
         child: Column(
@@ -195,6 +190,22 @@ class _CreateTaskGroupDialogState extends State<CreateTaskGroupDialog> {
               controller: _descriptionController,
               decoration: const InputDecoration(labelText: 'Description'),
             ),
+            const SizedBox(height: 16),
+            DropdownButtonFormField<String>(
+              value: _selectedFaction,
+              decoration: const InputDecoration(labelText: 'Faction'),
+              items: const [
+                DropdownMenuItem(value: 'USMC', child: Text('USMC')),
+                DropdownMenuItem(value: 'PLAN', child: Text('PLAN')),
+              ],
+              onChanged: (value) {
+                if (value != null) {
+                  setState(() {
+                    _selectedFaction = value;
+                  });
+                }
+              },
+            ),
           ],
         ),
       ),
@@ -209,6 +220,7 @@ class _CreateTaskGroupDialogState extends State<CreateTaskGroupDialog> {
               Navigator.pop(context, {
                 'name': _nameController.text,
                 'description': _descriptionController.text,
+                'faction': _selectedFaction,
               });
             }
           },

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'screens/task_group_list_screen.dart';
+import 'screens/scenario_list_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -32,7 +32,7 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
       ),
-      home: const TaskGroupListScreen(),
+      home: const ScenarioListScreen(),
     );
   }
 }

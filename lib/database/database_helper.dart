@@ -236,4 +236,13 @@ class DatabaseHelper {
     }
     return markers;
   }
+
+  Future<void> deleteTaskGroup(String id) async {
+    final db = await instance.database;
+    await db.delete(
+      'task_groups',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
 } 
