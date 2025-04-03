@@ -10,17 +10,20 @@ A Flutter application for tracking units and their status in wargaming scenarios
 - View scenario statistics (task groups, units, markers)
 - Import/export scenarios as JSON files
 - Duplicate existing scenarios
+- Reset database to default state
 
 ### Task Groups
 - Create, edit, and delete task groups within scenarios
 - Organize task groups by faction
 - View all units within a task group
+- Each task group maintains its own unique set of units
 
 ### Units
-- Create, edit, and delete units within task groups
+- Each unit has a unique identifier within its task group
+- Units with the same name in different task groups are treated as separate entities
 - Track unit attributes:
   - Name
-  - Type
+  - Type (Infantry, Armor, Artillery, Air, Naval, Logistics)
   - Attack value
   - Defense value
   - Movement value
@@ -31,6 +34,9 @@ A Flutter application for tracking units and their status in wargaming scenarios
 - Each color can only exist once per unit
 - Markers persist between sessions
 - Visual representation of unit status
+- Each unit maintains its own independent marker state
+- Backup and restore marker configurations
+- Reset markers to default state
 
 ## Getting Started
 
@@ -67,8 +73,8 @@ The app uses SQLite for data persistence with the following tables:
 Scenarios can be exported as JSON files and imported back into the app. The export includes:
 - Scenario details
 - All task groups
-- All units
-- All markers
+- All units with their unique identifiers
+- All markers with their unit associations
 
 ## License
 
