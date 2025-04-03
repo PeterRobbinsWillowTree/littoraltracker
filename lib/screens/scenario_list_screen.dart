@@ -249,6 +249,38 @@ class _ScenarioListScreenState extends State<ScenarioListScreen> {
             onPressed: _importScenario,
             tooltip: 'Import Scenario',
           ),
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () async {
+              final confirmed = await showDialog<bool>(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('Reset Database'),
+                  content: const Text('This will delete all scenarios and their data. Are you sure?'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: const Text('Cancel'),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, true),
+                      child: const Text('Reset'),
+                    ),
+                  ],
+                ),
+              );
+
+              if (confirmed == true) {
+                await DatabaseHelper.instance.deleteDatabase();
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Database reset successfully')),
+                  );
+                  setState(() {});
+                }
+              }
+            },
+          ),
         ],
       ),
       body: _isLoading

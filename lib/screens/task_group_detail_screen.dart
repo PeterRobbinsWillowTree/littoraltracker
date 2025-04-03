@@ -7,7 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 import '../models/marker_color.dart';
 
-class TaskGroupDetailScreen extends StatelessWidget {
+class TaskGroupDetailScreen extends StatefulWidget {
   final TaskGroup taskGroup;
 
   const TaskGroupDetailScreen({
@@ -15,69 +15,62 @@ class TaskGroupDetailScreen extends StatelessWidget {
     required this.taskGroup,
   });
 
-  // Mock data for units
-  List<Unit> get units => [
-        Unit(
-          id: '1',
-          taskGroupId: taskGroup.id,
-          name: 'Marine Squad',
-          type: UnitType.infantry,
-          attack: 4,
-          defense: 3,
-          movement: 2,
-          special: 'Amphibious',
-        ),
-        Unit(
-          id: '2',
-          taskGroupId: taskGroup.id,
-          name: 'Tank Platoon',
-          type: UnitType.armor,
-          attack: 6,
-          defense: 5,
-          movement: 3,
-          special: 'Heavy Armor',
-        ),
-        Unit(
-          id: '3',
-          taskGroupId: taskGroup.id,
-          name: 'Artillery Battery',
-          type: UnitType.artillery,
-          attack: 5,
-          defense: 2,
-          movement: 1,
-          special: 'Indirect Fire',
-        ),
-        Unit(
-          id: '4',
-          taskGroupId: taskGroup.id,
-          name: 'Attack Helicopter',
-          type: UnitType.air,
-          attack: 5,
-          defense: 3,
-          movement: 4,
-          special: 'Air Mobility',
-        ),
-      ];
+  @override
+  State<TaskGroupDetailScreen> createState() => _TaskGroupDetailScreenState();
+}
+
+class _TaskGroupDetailScreenState extends State<TaskGroupDetailScreen> {
+  List<Unit> _units = [];
+  bool _isLoading = true;
+  String? _errorMessage;
+  final DatabaseHelper _dbHelper = DatabaseHelper.instance;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUnits();
+  }
+
+  Future<void> _loadUnits() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final unitMaps = await _dbHelper.getUnitsForTaskGroup(widget.taskGroup.id);
+      setState(() {
+        _units = unitMaps.map((map) => Unit.fromMap(map)).toList();
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Failed to load units: ${e.toString()}';
+      });
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 4,
+      length: _units.length,
       child: Scaffold(
         appBar: AppBar(
-          title: Text(taskGroup.name),
-          bottom: const TabBar(
-            tabs: [
-              Tab(text: 'Unit 1'),
-              Tab(text: 'Unit 2'),
-              Tab(text: 'Unit 3'),
-              Tab(text: 'Unit 4'),
-            ],
+          title: Text(widget.taskGroup.name),
+          bottom: TabBar(
+            tabs: _units.map((unit) => Tab(text: unit.name)).toList(),
           ),
         ),
-        body: TabBarView(
-          children: units.map((unit) => UnitCard(unit: unit)).toList(),
-        ),
+        body: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : _errorMessage != null
+                ? Center(child: Text(_errorMessage!))
+                : TabBarView(
+                    children: _units.map((unit) => UnitCard(unit: unit)).toList(),
+                  ),
       ),
     );
   }

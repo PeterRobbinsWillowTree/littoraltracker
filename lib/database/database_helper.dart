@@ -72,10 +72,93 @@ class DatabaseHelper {
         FOREIGN KEY (unit_id) REFERENCES units (id) ON DELETE CASCADE
       )
     ''');
+
+    // Create default scenario
+    final scenarioId = 'default_scenario';
+    await db.insert('scenarios', {
+      'id': scenarioId,
+      'name': 'Default Scenario',
+      'description': 'Initial scenario with Alpha and Beta task groups',
+      'created_at': DateTime.now().millisecondsSinceEpoch,
+      'faction': 'USMC'
+    });
+
+    // Create Alpha task group
+    final alphaGroupId = 'alpha_group_${DateTime.now().millisecondsSinceEpoch}';
+    await db.insert('task_groups', {
+      'id': alphaGroupId,
+      'scenario_id': scenarioId,
+      'name': 'Alpha Group',
+      'description': 'First task group',
+      'created_at': DateTime.now().millisecondsSinceEpoch,
+      'faction': 'USMC'
+    });
+
+    // Create Beta task group
+    final betaGroupId = 'beta_group_${DateTime.now().millisecondsSinceEpoch + 1}';
+    await db.insert('task_groups', {
+      'id': betaGroupId,
+      'scenario_id': scenarioId,
+      'name': 'Beta Group',
+      'description': 'Second task group',
+      'created_at': DateTime.now().millisecondsSinceEpoch + 1,
+      'faction': 'USMC'
+    });
+
+    // Create units for Alpha group
+    final alphaUnit1Id = 'alpha_unit1_${DateTime.now().millisecondsSinceEpoch}_${DateTime.now().microsecondsSinceEpoch}';
+    await db.insert('units', {
+      'id': alphaUnit1Id,
+      'task_group_id': alphaGroupId,
+      'name': 'Alpha Unit 1',
+      'type': 'infantry',
+      'attack': 3,
+      'defense': 2,
+      'movement': 2,
+      'special': 'None'
+    });
+
+    final alphaUnit2Id = 'alpha_unit2_${DateTime.now().millisecondsSinceEpoch}_${DateTime.now().microsecondsSinceEpoch + 1}';
+    await db.insert('units', {
+      'id': alphaUnit2Id,
+      'task_group_id': alphaGroupId,
+      'name': 'Alpha Unit 2',
+      'type': 'armor',
+      'attack': 4,
+      'defense': 3,
+      'movement': 3,
+      'special': 'None'
+    });
+
+    // Create units for Beta group
+    final betaUnit1Id = 'beta_unit1_${DateTime.now().millisecondsSinceEpoch}_${DateTime.now().microsecondsSinceEpoch + 2}';
+    await db.insert('units', {
+      'id': betaUnit1Id,
+      'task_group_id': betaGroupId,
+      'name': 'Beta Unit 1',
+      'type': 'infantry',
+      'attack': 3,
+      'defense': 2,
+      'movement': 2,
+      'special': 'None'
+    });
+
+    final betaUnit2Id = 'beta_unit2_${DateTime.now().millisecondsSinceEpoch}_${DateTime.now().microsecondsSinceEpoch + 3}';
+    await db.insert('units', {
+      'id': betaUnit2Id,
+      'task_group_id': betaGroupId,
+      'name': 'Beta Unit 2',
+      'type': 'armor',
+      'attack': 4,
+      'defense': 3,
+      'movement': 3,
+      'special': 'None'
+    });
   }
 
   Future<void> _upgradeDB(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 2) {
+      // Create scenarios table
       await db.execute('''
         CREATE TABLE scenarios (
           id TEXT PRIMARY KEY,
@@ -86,6 +169,7 @@ class DatabaseHelper {
         )
       ''');
 
+      // Add new columns to task_groups
       await db.execute('''
         ALTER TABLE task_groups 
         ADD COLUMN scenario_id TEXT NOT NULL DEFAULT 'default_scenario'
@@ -97,6 +181,7 @@ class DatabaseHelper {
         CHECK(faction IN ('USMC', 'PLAN'))
       ''');
 
+      // Create default scenario
       await db.insert('scenarios', {
         'id': 'default_scenario',
         'name': 'Default Scenario',
@@ -104,6 +189,45 @@ class DatabaseHelper {
         'created_at': DateTime.now().millisecondsSinceEpoch,
         'faction': 'USMC'
       });
+
+      // Update existing task groups to have unique IDs
+      final taskGroups = await db.query('task_groups');
+      for (final taskGroup in taskGroups) {
+        final newTaskGroupId = '${DateTime.now().millisecondsSinceEpoch}_${taskGroup['id']}';
+        await db.update(
+          'task_groups',
+          {'id': newTaskGroupId},
+          where: 'id = ?',
+          whereArgs: [taskGroup['id']],
+        );
+
+        // Update units to have unique IDs and correct task group references
+        final units = await db.query(
+          'units',
+          where: 'task_group_id = ?',
+          whereArgs: [taskGroup['id']],
+        );
+        for (final unit in units) {
+          final newUnitId = '${DateTime.now().millisecondsSinceEpoch}_${unit['id']}';
+          await db.update(
+            'units',
+            {
+              'id': newUnitId,
+              'task_group_id': newTaskGroupId,
+            },
+            where: 'id = ?',
+            whereArgs: [unit['id']],
+          );
+
+          // Update markers to reference new unit ID
+          await db.update(
+            'unit_markers',
+            {'unit_id': newUnitId},
+            where: 'unit_id = ?',
+            whereArgs: [unit['id']],
+          );
+        }
+      }
     }
   }
 
@@ -272,7 +396,7 @@ class DatabaseHelper {
 
     // Duplicate each task group and its units
     for (final taskGroup in taskGroups) {
-      final newTaskGroupId = DateTime.now().millisecondsSinceEpoch.toString();
+      final newTaskGroupId = '${DateTime.now().millisecondsSinceEpoch}_${taskGroup['id']}';
       
       // Create new task group
       await db.insert('task_groups', {
@@ -293,7 +417,7 @@ class DatabaseHelper {
 
       // Duplicate each unit and its markers
       for (final unit in units) {
-        final newUnitId = DateTime.now().millisecondsSinceEpoch.toString();
+        final newUnitId = '${DateTime.now().millisecondsSinceEpoch}_${unit['id']}';
         
         // Create new unit
         await db.insert('units', {
@@ -359,41 +483,32 @@ class DatabaseHelper {
     final db = await instance.database;
     final importData = jsonDecode(jsonData) as Map<String, dynamic>;
 
-    // Create new scenario
-    final newScenarioId = DateTime.now().millisecondsSinceEpoch.toString();
+    // Create new scenario with original ID
     await db.insert('scenarios', {
-      'id': newScenarioId,
+      'id': importData['scenario']['id'],
       'name': importData['scenario']['name'],
       'description': importData['scenario']['description'],
-      'created_at': DateTime.now().millisecondsSinceEpoch,
+      'created_at': importData['scenario']['created_at'],
       'faction': importData['scenario']['faction'],
     });
 
-    // Create task groups
-    final taskGroupMap = <String, String>{};
+    // Create task groups with original IDs
     for (final taskGroup in importData['task_groups']) {
-      final newTaskGroupId = DateTime.now().millisecondsSinceEpoch.toString();
-      taskGroupMap[taskGroup['id']] = newTaskGroupId;
-      
       await db.insert('task_groups', {
-        'id': newTaskGroupId,
-        'scenario_id': newScenarioId,
+        'id': taskGroup['id'],
+        'scenario_id': importData['scenario']['id'],
         'name': taskGroup['name'],
         'description': taskGroup['description'],
-        'created_at': DateTime.now().millisecondsSinceEpoch,
+        'created_at': taskGroup['created_at'],
         'faction': taskGroup['faction'],
       });
     }
 
-    // Create units
-    final unitMap = <String, String>{};
+    // Create units with original IDs
     for (final unit in importData['units']) {
-      final newUnitId = DateTime.now().millisecondsSinceEpoch.toString();
-      unitMap[unit['id']] = newUnitId;
-      
       await db.insert('units', {
-        'id': newUnitId,
-        'task_group_id': taskGroupMap[unit['task_group_id']],
+        'id': unit['id'],
+        'task_group_id': unit['task_group_id'],
         'name': unit['name'],
         'type': unit['type'],
         'attack': unit['attack'],
@@ -403,10 +518,10 @@ class DatabaseHelper {
       });
     }
 
-    // Create markers
+    // Create markers with original unit IDs
     for (final marker in importData['markers']) {
       await db.insert('unit_markers', {
-        'unit_id': unitMap[marker['unit_id']],
+        'unit_id': marker['unit_id'],
         'position': marker['position'],
         'color': marker['color'],
       });
@@ -439,5 +554,22 @@ class DatabaseHelper {
       'unitCount': unitCount,
       'markerCount': markerCount,
     };
+  }
+
+  Future<List<Map<String, dynamic>>> getUnitsForTaskGroup(String taskGroupId) async {
+    final db = await instance.database;
+    return await db.query(
+      'units',
+      where: 'task_group_id = ?',
+      whereArgs: [taskGroupId],
+      orderBy: 'name ASC',
+    );
+  }
+
+  Future<void> deleteDatabase() async {
+    final dbPath = await getDatabasesPath();
+    final path = join(dbPath, 'littoral_tracker.db');
+    await databaseFactory.deleteDatabase(path);
+    _database = null;
   }
 } 

@@ -35,11 +35,24 @@ class Unit {
   }
 
   factory Unit.fromMap(Map<String, dynamic> map) {
+    print('Converting unit from map: $map');
+    print('Type value from map: ${map['type']}');
+    print('Available enum values: ${UnitType.values.map((e) => e.toString().split('.').last.toLowerCase())}');
+    
+    final typeString = map['type'].toString().toLowerCase();
+    final type = UnitType.values.firstWhere(
+      (e) => e.toString().split('.').last.toLowerCase() == typeString,
+      orElse: () {
+        print('No matching type found for: $typeString');
+        return UnitType.infantry;
+      },
+    );
+    
     return Unit(
       id: map['id'],
       taskGroupId: map['task_group_id'],
       name: map['name'],
-      type: UnitType.values.firstWhere((e) => e.toString() == map['type']),
+      type: type,
       attack: map['attack'],
       defense: map['defense'],
       movement: map['movement'],
