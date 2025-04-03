@@ -1,6 +1,7 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import '../models/marker_color.dart';
+import 'dart:convert';
 
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
@@ -244,5 +245,199 @@ class DatabaseHelper {
       where: 'id = ?',
       whereArgs: [id],
     );
+  }
+
+  Future<String> duplicateScenario(String scenarioId) async {
+    final db = await instance.database;
+    final scenario = await getScenario(scenarioId);
+    if (scenario == null) throw Exception('Scenario not found');
+
+    final newScenarioId = DateTime.now().millisecondsSinceEpoch.toString();
+    
+    // Create new scenario
+    await db.insert('scenarios', {
+      'id': newScenarioId,
+      'name': '${scenario['name']} (Copy)',
+      'description': scenario['description'],
+      'created_at': DateTime.now().millisecondsSinceEpoch,
+      'faction': scenario['faction'],
+    });
+
+    // Get all task groups for the scenario
+    final taskGroups = await db.query(
+      'task_groups',
+      where: 'scenario_id = ?',
+      whereArgs: [scenarioId],
+    );
+
+    // Duplicate each task group and its units
+    for (final taskGroup in taskGroups) {
+      final newTaskGroupId = DateTime.now().millisecondsSinceEpoch.toString();
+      
+      // Create new task group
+      await db.insert('task_groups', {
+        'id': newTaskGroupId,
+        'scenario_id': newScenarioId,
+        'name': taskGroup['name'],
+        'description': taskGroup['description'],
+        'created_at': DateTime.now().millisecondsSinceEpoch,
+        'faction': taskGroup['faction'],
+      });
+
+      // Get all units for the task group
+      final units = await db.query(
+        'units',
+        where: 'task_group_id = ?',
+        whereArgs: [taskGroup['id']],
+      );
+
+      // Duplicate each unit and its markers
+      for (final unit in units) {
+        final newUnitId = DateTime.now().millisecondsSinceEpoch.toString();
+        
+        // Create new unit
+        await db.insert('units', {
+          'id': newUnitId,
+          'task_group_id': newTaskGroupId,
+          'name': unit['name'],
+          'type': unit['type'],
+          'attack': unit['attack'],
+          'defense': unit['defense'],
+          'movement': unit['movement'],
+          'special': unit['special'],
+        });
+
+        // Get all markers for the unit
+        final markers = await db.query(
+          'unit_markers',
+          where: 'unit_id = ?',
+          whereArgs: [unit['id']],
+        );
+
+        // Duplicate each marker
+        for (final marker in markers) {
+          await db.insert('unit_markers', {
+            'unit_id': newUnitId,
+            'position': marker['position'],
+            'color': marker['color'],
+          });
+        }
+      }
+    }
+
+    return newScenarioId;
+  }
+
+  Future<String> exportScenario(String scenarioId) async {
+    final db = await instance.database;
+    final scenario = await getScenario(scenarioId);
+    if (scenario == null) throw Exception('Scenario not found');
+
+    final exportData = {
+      'scenario': scenario,
+      'task_groups': await db.query(
+        'task_groups',
+        where: 'scenario_id = ?',
+        whereArgs: [scenarioId],
+      ),
+      'units': await db.query(
+        'units',
+        where: 'task_group_id IN (SELECT id FROM task_groups WHERE scenario_id = ?)',
+        whereArgs: [scenarioId],
+      ),
+      'markers': await db.query(
+        'unit_markers',
+        where: 'unit_id IN (SELECT id FROM units WHERE task_group_id IN (SELECT id FROM task_groups WHERE scenario_id = ?))',
+        whereArgs: [scenarioId],
+      ),
+    };
+
+    return jsonEncode(exportData);
+  }
+
+  Future<void> importScenario(String jsonData) async {
+    final db = await instance.database;
+    final importData = jsonDecode(jsonData) as Map<String, dynamic>;
+
+    // Create new scenario
+    final newScenarioId = DateTime.now().millisecondsSinceEpoch.toString();
+    await db.insert('scenarios', {
+      'id': newScenarioId,
+      'name': importData['scenario']['name'],
+      'description': importData['scenario']['description'],
+      'created_at': DateTime.now().millisecondsSinceEpoch,
+      'faction': importData['scenario']['faction'],
+    });
+
+    // Create task groups
+    final taskGroupMap = <String, String>{};
+    for (final taskGroup in importData['task_groups']) {
+      final newTaskGroupId = DateTime.now().millisecondsSinceEpoch.toString();
+      taskGroupMap[taskGroup['id']] = newTaskGroupId;
+      
+      await db.insert('task_groups', {
+        'id': newTaskGroupId,
+        'scenario_id': newScenarioId,
+        'name': taskGroup['name'],
+        'description': taskGroup['description'],
+        'created_at': DateTime.now().millisecondsSinceEpoch,
+        'faction': taskGroup['faction'],
+      });
+    }
+
+    // Create units
+    final unitMap = <String, String>{};
+    for (final unit in importData['units']) {
+      final newUnitId = DateTime.now().millisecondsSinceEpoch.toString();
+      unitMap[unit['id']] = newUnitId;
+      
+      await db.insert('units', {
+        'id': newUnitId,
+        'task_group_id': taskGroupMap[unit['task_group_id']],
+        'name': unit['name'],
+        'type': unit['type'],
+        'attack': unit['attack'],
+        'defense': unit['defense'],
+        'movement': unit['movement'],
+        'special': unit['special'],
+      });
+    }
+
+    // Create markers
+    for (final marker in importData['markers']) {
+      await db.insert('unit_markers', {
+        'unit_id': unitMap[marker['unit_id']],
+        'position': marker['position'],
+        'color': marker['color'],
+      });
+    }
+  }
+
+  Future<Map<String, dynamic>> getScenarioStats(String scenarioId) async {
+    final db = await instance.database;
+    
+    final taskGroupCount = (await db.query(
+      'task_groups',
+      where: 'scenario_id = ?',
+      whereArgs: [scenarioId],
+    )).length;
+
+    final unitCount = (await db.query(
+      'units',
+      where: 'task_group_id IN (SELECT id FROM task_groups WHERE scenario_id = ?)',
+      whereArgs: [scenarioId],
+    )).length;
+
+    final markerCount = (await db.query(
+      'unit_markers',
+      where: 'unit_id IN (SELECT id FROM units WHERE task_group_id IN (SELECT id FROM task_groups WHERE scenario_id = ?))',
+      whereArgs: [scenarioId],
+    )).length;
+
+    return {
+      'taskGroupCount': taskGroupCount,
+      'unitCount': unitCount,
+      'markerCount': markerCount,
+    };
   }
 } 
