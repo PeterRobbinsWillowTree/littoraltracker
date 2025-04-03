@@ -1,4 +1,4 @@
-enum UnitType { infantry, armor, artillery, air }
+enum UnitType { infantry, armor, artillery, air, naval, logistics }
 
 class Unit {
   final String id;

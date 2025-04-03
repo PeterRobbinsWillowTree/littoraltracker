@@ -74,6 +74,15 @@ class TaskGroupDetailScreen extends StatelessWidget {
   }
 }
 
+enum MarkerColor {
+  black,
+  red,
+  purple,
+  green,
+  blue,
+  none
+}
+
 class UnitCard extends StatefulWidget {
   final Unit unit;
 
@@ -87,14 +96,113 @@ class UnitCard extends StatefulWidget {
 }
 
 class _UnitCardState extends State<UnitCard> {
-  int currentHealth = 20;
+  Map<int, MarkerColor> markers = {};
+  MarkerColor selectedColor = MarkerColor.black;
 
-  Widget _buildHealthTracker() {
+  Widget _buildHeader() {
+    return Container(
+      padding: const EdgeInsets.all(8),
+      color: Colors.black12,
+      child: Row(
+        children: [
+          // Unit icon with background
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.grey[800],
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Icon(
+              _getUnitTypeIcon(widget.unit.type),
+              color: Colors.white,
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: 8),
+          // Unit value indicator
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.red,
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Text(
+              '2',  // Unit value - you might want to add this to your Unit model
+              style: const TextStyle(
+                color: Colors.white, 
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.unit.name.toUpperCase(),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                Text(
+                  widget.unit.special,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Color _getMarkerColor(MarkerColor color) {
+    switch (color) {
+      case MarkerColor.black: return Colors.black;
+      case MarkerColor.red: return Colors.red;
+      case MarkerColor.purple: return Colors.purple;
+      case MarkerColor.green: return Colors.green;
+      case MarkerColor.blue: return Colors.blue;
+      case MarkerColor.none: return Colors.transparent;
+    }
+  }
+
+  Widget _buildColorSelector() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: MarkerColor.values.where((c) => c != MarkerColor.none).map((color) {
+        return GestureDetector(
+          onTap: () => setState(() => selectedColor = color),
+          child: Container(
+            width: 30,
+            height: 30,
+            decoration: BoxDecoration(
+              color: _getMarkerColor(color),
+              border: Border.all(
+                color: selectedColor == color ? Colors.yellow : Colors.grey,
+                width: selectedColor == color ? 2 : 1,
+              ),
+              borderRadius: BorderRadius.circular(4),
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildTracker() {
     return Container(
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
+        color: Colors.grey[200],
         border: Border.all(color: Colors.grey),
-        borderRadius: BorderRadius.circular(4),
       ),
       child: Column(
         children: List.generate(4, (row) {
@@ -103,11 +211,15 @@ class _UnitCardState extends State<UnitCard> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: List.generate(5, (col) {
-                final number = 20 - (row * 5 + col);
+                final number = row * 5 + col + 1;
                 return GestureDetector(
                   onTap: () {
                     setState(() {
-                      currentHealth = number;
+                      if (markers[number] == selectedColor) {
+                        markers.remove(number);
+                      } else {
+                        markers[number] = selectedColor;
+                      }
                     });
                   },
                   child: Container(
@@ -115,21 +227,29 @@ class _UnitCardState extends State<UnitCard> {
                     height: 40,
                     margin: const EdgeInsets.symmetric(horizontal: 2),
                     decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey),
-                      color: number >= currentHealth 
-                          ? Colors.transparent 
-                          : Colors.black,
+                      color: Colors.white,
+                      border: Border.all(color: Colors.grey[400]!),
                     ),
-                    child: Center(
-                      child: Text(
-                        number.toString(),
-                        style: TextStyle(
-                          color: number >= currentHealth 
-                              ? Colors.black 
-                              : Colors.white,
-                          fontWeight: FontWeight.bold,
+                    child: Stack(
+                      children: [
+                        Center(
+                          child: Text(
+                            number.toString(),
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
-                      ),
+                        if (markers[number] != null)
+                          Container(
+                            margin: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: _getMarkerColor(markers[number]!),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          ),
+                      ],
                     ),
                   ),
                 );
@@ -145,62 +265,40 @@ class _UnitCardState extends State<UnitCard> {
   Widget build(BuildContext context) {
     return Card(
       margin: const EdgeInsets.all(16),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              widget.unit.name,
-              style: Theme.of(context).textTheme.headlineSmall,
-            ),
-            const SizedBox(height: 16),
-            _buildHealthTracker(),
-            const SizedBox(height: 16),
-            Text('Type: ${widget.unit.type.name}'),
-            const Divider(),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
+      color: Colors.grey[100],
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _buildHeader(),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
               children: [
-                _StatBox(label: 'Attack', value: widget.unit.attack),
-                _StatBox(label: 'Defense', value: widget.unit.defense),
-                _StatBox(label: 'Movement', value: widget.unit.movement),
+                _buildTracker(),
+                const SizedBox(height: 16),
+                _buildColorSelector(),
               ],
             ),
-            const Divider(),
-            Text(
-              'Special: ${widget.unit.special}',
-              style: Theme.of(context).textTheme.bodyLarge,
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 }
 
-class _StatBox extends StatelessWidget {
-  final String label;
-  final int value;
-
-  const _StatBox({
-    required this.label,
-    required this.value,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Text(
-          label,
-          style: Theme.of(context).textTheme.bodySmall,
-        ),
-        Text(
-          value.toString(),
-          style: Theme.of(context).textTheme.headlineMedium,
-        ),
-      ],
-    );
+IconData _getUnitTypeIcon(UnitType type) {
+  switch (type) {
+    case UnitType.infantry:
+      return Icons.directions_walk; // Person walking for infantry
+    case UnitType.armor:
+      return Icons.directions_car; // Vehicle for armor
+    case UnitType.artillery:
+      return Icons.flash_on; // Lightning bolt for artillery
+    case UnitType.air:
+      return Icons.flight; // Air unit
+    case UnitType.naval:
+      return Icons.directions_boat; // Boat for naval units
+    case UnitType.logistics:
+      return Icons.local_shipping; // Truck for logistics
   }
 } 

@@ -26,6 +26,55 @@ class _TaskGroupListScreenState extends State<TaskGroupListScreen> {
     ),
   ];
 
+  void _addNewTaskGroup() {
+    final nameController = TextEditingController();
+    final descriptionController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Add New Task Group'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameController,
+              decoration: const InputDecoration(labelText: 'Task Group Name'),
+            ),
+            TextField(
+              controller: descriptionController,
+              decoration: const InputDecoration(labelText: 'Description'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              if (nameController.text.isNotEmpty) {
+                setState(() {
+                  taskGroups.add(
+                    TaskGroup(
+                      id: (taskGroups.length + 1).toString(),
+                      name: nameController.text,
+                      description: descriptionController.text,
+                      createdAt: DateTime.now(),
+                    ),
+                  );
+                });
+                Navigator.pop(context);
+              }
+            },
+            child: const Text('Add'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -56,12 +105,7 @@ class _TaskGroupListScreenState extends State<TaskGroupListScreen> {
         },
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          // TODO: Implement add new task group
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Add new task group')),
-          );
-        },
+        onPressed: _addNewTaskGroup,
         child: const Icon(Icons.add),
       ),
     );
