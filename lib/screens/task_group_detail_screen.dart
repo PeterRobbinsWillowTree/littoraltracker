@@ -193,27 +193,40 @@ class _UnitCardState extends State<UnitCard> {
 
   void _handleMarkerTap(int number) {
     setState(() {
-      // Find and collect positions with the selected color
-      final positionsToRemove = <int>[];
-      markers.forEach((key, value) {
-        if (value.contains(selectedColor)) {
-          positionsToRemove.add(key);
+      // First, check if the selected color exists anywhere on the card
+      int? existingPosition;
+      markers.forEach((pos, colors) {
+        if (colors.contains(selectedColor)) {
+          existingPosition = pos;
         }
       });
 
-      // Remove the color from collected positions
-      for (final position in positionsToRemove) {
-        markers[position]!.remove(selectedColor);
-        if (markers[position]!.isEmpty) {
-          markers.remove(position);
+      if (existingPosition != null) {
+        // If clicking the same position, remove the color
+        if (existingPosition == number) {
+          markers[number]!.remove(selectedColor);
+          if (markers[number]!.isEmpty) {
+            markers.remove(number);
+          }
+        } else {
+          // If clicking a different position, move the color
+          markers[existingPosition]!.remove(selectedColor);
+          if (markers[existingPosition]!.isEmpty) {
+            markers.remove(existingPosition);
+          }
+          
+          if (!markers.containsKey(number)) {
+            markers[number] = [];
+          }
+          markers[number]!.add(selectedColor);
         }
+      } else {
+        // If the color doesn't exist anywhere, add it to the clicked position
+        if (!markers.containsKey(number)) {
+          markers[number] = [];
+        }
+        markers[number]!.add(selectedColor);
       }
-
-      // Add the new marker
-      if (!markers.containsKey(number)) {
-        markers[number] = [];
-      }
-      markers[number]!.add(selectedColor);
     });
     _saveMarkers();
   }
@@ -325,55 +338,58 @@ class _UnitCardState extends State<UnitCard> {
       ),
       child: Column(
         children: List.generate(4, (row) {
-          return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 2),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: List.generate(5, (col) {
-                final number = row * 5 + col + 1;
-                return GestureDetector(
-                  onTap: () => _handleMarkerTap(number),
-                  child: Container(
-                    width: 40,
-                    height: 40,
-                    margin: const EdgeInsets.symmetric(horizontal: 2),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      border: Border.all(color: Colors.grey[400]!),
-                    ),
-                    child: Stack(
-                      children: [
-                        Center(
-                          child: Text(
-                            number.toString(),
-                            style: TextStyle(
-                              color: Colors.grey[600],
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
+          return Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 2),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: List.generate(5, (col) {
+                  final number = row * 5 + col + 1;
+                  return Expanded(
+                    child: GestureDetector(
+                      onTap: () => _handleMarkerTap(number),
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          border: Border.all(color: Colors.grey[400]!),
                         ),
-                        if (markers[number] != null)
-                          ...markers[number]!.asMap().entries.map((entry) {
-                            final index = entry.key;
-                            final color = entry.value;
-                            return Positioned(
-                              left: 4 + (index * 8),
-                              top: 4,
-                              child: Container(
-                                width: 8,
-                                height: 8,
-                                decoration: BoxDecoration(
-                                  color: _getMarkerColor(color),
-                                  borderRadius: BorderRadius.circular(2),
+                        child: Stack(
+                          children: [
+                            Center(
+                              child: Text(
+                                number.toString(),
+                                style: TextStyle(
+                                  color: Colors.grey[600],
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 24,
                                 ),
                               ),
-                            );
-                          }),
-                      ],
+                            ),
+                            if (markers[number] != null)
+                              ...markers[number]!.asMap().entries.map((entry) {
+                                final index = entry.key;
+                                final color = entry.value;
+                                return Positioned(
+                                  left: 8 + (index * 12),
+                                  top: 8,
+                                  child: Container(
+                                    width: 12,
+                                    height: 12,
+                                    decoration: BoxDecoration(
+                                      color: _getMarkerColor(color),
+                                      borderRadius: BorderRadius.circular(3),
+                                    ),
+                                  ),
+                                );
+                              }),
+                          ],
+                        ),
+                      ),
                     ),
-                  ),
-                );
-              }),
+                  );
+                }),
+              ),
             ),
           );
         }),
@@ -400,32 +416,18 @@ class _UnitCardState extends State<UnitCard> {
                 style: const TextStyle(color: Colors.red),
               ),
             ),
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                _buildTracker(),
-                const SizedBox(height: 16),
-                _buildColorSelector(),
-                const SizedBox(height: 16),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    ElevatedButton(
-                      onPressed: _resetMarkers,
-                      child: const Text('Reset Markers'),
-                    ),
-                    ElevatedButton(
-                      onPressed: _backupMarkers,
-                      child: const Text('Backup'),
-                    ),
-                    ElevatedButton(
-                      onPressed: _restoreMarkers,
-                      child: const Text('Restore'),
-                    ),
-                  ],
-                ),
-              ],
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  Expanded(
+                    child: _buildTracker(),
+                  ),
+                  const SizedBox(height: 16),
+                  _buildColorSelector(),
+                ],
+              ),
             ),
           ),
         ],

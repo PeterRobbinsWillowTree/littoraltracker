@@ -6,7 +6,6 @@ import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
-import 'dart:convert';
 import 'dart:io';
 
 class ScenarioListScreen extends StatefulWidget {
