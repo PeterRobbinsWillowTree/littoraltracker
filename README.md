@@ -1,42 +1,46 @@
 # Littoral Tracker
 
-A Flutter application for tracking units and their status in wargaming scenarios.
+A Flutter application for tracking units and their status in wargaming scenarios. The app allows you to manage scenarios, task groups, units, and their status markers.
 
 ## Features
 
 ### Scenarios
 - Create, edit, and delete scenarios
-- Organize scenarios by faction (USMC or PLA)
-- View scenario statistics (task groups, units, markers)
-- Import/export scenarios as JSON files
 - Duplicate existing scenarios
-- Reset database to default state
+- Import/export scenarios as JSON files
+- View scenario statistics (task groups, units, markers)
+- Assign factions (USMC or PLAN) to scenarios
 
 ### Task Groups
 - Create, edit, and delete task groups within scenarios
-- Organize task groups by faction
-- View all units within a task group
-- Each task group maintains its own unique set of units
+- Assign factions to task groups
+- Organize units into task groups
+- View task group details and unit status
 
 ### Units
-- Each unit has a unique identifier within its task group
-- Units with the same name in different task groups are treated as separate entities
-- Track unit attributes:
+- Add, edit, and delete units within task groups
+- Customize unit properties:
   - Name
   - Type (Infantry, Armor, Artillery, Air, Naval, Logistics)
   - Attack value
   - Defense value
   - Movement value
   - Special abilities
+- Track unit status using a 4x5 grid system
+- Place and move colored markers on the grid:
+  - Black
+  - Red
+  - Purple
+  - Green
+  - Blue
+- Backup and restore unit marker configurations
 
 ### Markers
-- Place multiple colored markers on unit positions
-- Each color can only exist once per unit
-- Markers persist between sessions
-- Visual representation of unit status
-- Each unit maintains its own independent marker state
-- Backup and restore marker configurations
-- Reset markers to default state
+- Place multiple colored markers on each grid position
+- Move markers by clicking on different positions
+- Remove markers by clicking their current position
+- Visual feedback for selected marker color
+- Automatic saving of marker positions
 
 ## Getting Started
 
@@ -52,30 +56,60 @@ A Flutter application for tracking units and their status in wargaming scenarios
 
 ## Dependencies
 
-- `sqflite`: For local database storage
-- `path`: For file path handling
-- `path_provider`: For accessing device storage
-- `intl`: For date formatting
-- `share_plus`: For file sharing
-- `file_picker`: For file selection
+- `sqflite`: SQLite database for local storage
+- `path_provider`: Access to device file system
+- `share_plus`: Share functionality for scenario export
+- `file_picker`: File selection for scenario import
+- `intl`: Date formatting utilities
 
 ## Data Structure
 
-The app uses SQLite for data persistence with the following tables:
+### Scenarios
+| Field | Type | Description |
+|-------|------|-------------|
+| id | TEXT | Unique identifier |
+| name | TEXT | Scenario name |
+| description | TEXT | Optional description |
+| created_at | INTEGER | Creation timestamp |
+| faction | TEXT | USMC or PLAN |
 
-- `scenarios`: Stores scenario information
-- `task_groups`: Stores task group information with scenario references
-- `units`: Stores unit information with task group references
-- `unit_markers`: Stores marker positions and colors with unit references
+### Task Groups
+| Field | Type | Description |
+|-------|------|-------------|
+| id | TEXT | Unique identifier |
+| scenario_id | TEXT | Parent scenario ID |
+| name | TEXT | Task group name |
+| description | TEXT | Optional description |
+| created_at | INTEGER | Creation timestamp |
+| faction | TEXT | USMC or PLAN |
+
+### Units
+| Field | Type | Description |
+|-------|------|-------------|
+| id | TEXT | Unique identifier |
+| task_group_id | TEXT | Parent task group ID |
+| name | TEXT | Unit name |
+| type | TEXT | Unit type (infantry, armor, etc.) |
+| attack | INTEGER | Attack value |
+| defense | INTEGER | Defense value |
+| movement | INTEGER | Movement value |
+| special | TEXT | Special abilities |
+
+### Markers
+| Field | Type | Description |
+|-------|------|-------------|
+| unit_id | TEXT | Parent unit ID |
+| position | INTEGER | Grid position (1-20) |
+| color | TEXT | Marker color |
 
 ## Import/Export
 
-Scenarios can be exported as JSON files and imported back into the app. The export includes:
+Scenarios can be exported and imported as JSON files. The export includes:
 - Scenario details
-- All task groups
-- All units with their unique identifiers
-- All markers with their unit associations
+- Task groups
+- Units
+- Marker configurations
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License.
