@@ -2,6 +2,7 @@ import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import '../models/marker_color.dart';
 import 'dart:convert';
+import '../models/unit.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
@@ -571,5 +572,64 @@ class DatabaseHelper {
     final path = join(dbPath, 'littoral_tracker.db');
     await databaseFactory.deleteDatabase(path);
     _database = null;
+  }
+
+  Future<void> createUnit({
+    required String taskGroupId,
+    required String name,
+    required UnitType type,
+    required int attack,
+    required int defense,
+    required int movement,
+    String? special,
+  }) async {
+    final db = await database;
+    await db.insert(
+      'units',
+      {
+        'id': '${DateTime.now().millisecondsSinceEpoch}_${taskGroupId}',
+        'task_group_id': taskGroupId,
+        'name': name,
+        'type': type.toString().split('.').last,
+        'attack': attack,
+        'defense': defense,
+        'movement': movement,
+        'special': special,
+      },
+    );
+  }
+
+  Future<void> updateUnit({
+    required String id,
+    required String name,
+    required UnitType type,
+    required int attack,
+    required int defense,
+    required int movement,
+    String? special,
+  }) async {
+    final db = await database;
+    await db.update(
+      'units',
+      {
+        'name': name,
+        'type': type.toString().split('.').last,
+        'attack': attack,
+        'defense': defense,
+        'movement': movement,
+        'special': special,
+      },
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  Future<void> deleteUnit(String id) async {
+    final db = await database;
+    await db.delete(
+      'units',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
   }
 } 

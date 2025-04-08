@@ -53,6 +53,89 @@ class _TaskGroupDetailScreenState extends State<TaskGroupDetailScreen> {
     }
   }
 
+  Future<void> _addUnit() async {
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (context) => const UnitEditDialog(),
+    );
+
+    if (result != null) {
+      try {
+        await _dbHelper.createUnit(
+          taskGroupId: widget.taskGroup.id,
+          name: result['name']!,
+          type: result['type']!,
+          attack: result['attack']!,
+          defense: result['defense']!,
+          movement: result['movement']!,
+          special: result['special'],
+        );
+        await _loadUnits();
+      } catch (e) {
+        setState(() {
+          _errorMessage = 'Failed to add unit: ${e.toString()}';
+        });
+      }
+    }
+  }
+
+  Future<void> _editUnit(Unit unit) async {
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (context) => UnitEditDialog(unit: unit),
+    );
+
+    if (result != null) {
+      try {
+        await _dbHelper.updateUnit(
+          id: unit.id,
+          name: result['name']!,
+          type: result['type']!,
+          attack: result['attack']!,
+          defense: result['defense']!,
+          movement: result['movement']!,
+          special: result['special'],
+        );
+        await _loadUnits();
+      } catch (e) {
+        setState(() {
+          _errorMessage = 'Failed to update unit: ${e.toString()}';
+        });
+      }
+    }
+  }
+
+  Future<void> _deleteUnit(Unit unit) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Unit'),
+        content: Text('Are you sure you want to delete "${unit.name}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        await _dbHelper.deleteUnit(unit.id);
+        await _loadUnits();
+      } catch (e) {
+        setState(() {
+          _errorMessage = 'Failed to delete unit: ${e.toString()}';
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
@@ -63,14 +146,38 @@ class _TaskGroupDetailScreenState extends State<TaskGroupDetailScreen> {
           bottom: TabBar(
             tabs: _units.map((unit) => Tab(text: unit.name)).toList(),
           ),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.add),
+              onPressed: _addUnit,
+            ),
+          ],
         ),
         body: _isLoading
             ? const Center(child: CircularProgressIndicator())
             : _errorMessage != null
                 ? Center(child: Text(_errorMessage!))
-                : TabBarView(
-                    children: _units.map((unit) => UnitCard(unit: unit)).toList(),
-                  ),
+                : _units.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Text('No units found'),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: _addUnit,
+                              child: const Text('Add Unit'),
+                            ),
+                          ],
+                        ),
+                      )
+                    : TabBarView(
+                        children: _units.map((unit) => UnitCard(
+                          unit: unit,
+                          onEdit: () => _editUnit(unit),
+                          onDelete: () => _deleteUnit(unit),
+                        )).toList(),
+                      ),
       ),
     );
   }
@@ -78,10 +185,14 @@ class _TaskGroupDetailScreenState extends State<TaskGroupDetailScreen> {
 
 class UnitCard extends StatefulWidget {
   final Unit unit;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
 
   const UnitCard({
     super.key,
     required this.unit,
+    required this.onEdit,
+    required this.onDelete,
   });
 
   @override
@@ -290,6 +401,16 @@ class _UnitCardState extends State<UnitCard> {
               ],
             ),
           ),
+          IconButton(
+            icon: const Icon(Icons.edit),
+            onPressed: widget.onEdit,
+            tooltip: 'Edit Unit',
+          ),
+          IconButton(
+            icon: const Icon(Icons.delete),
+            onPressed: widget.onDelete,
+            tooltip: 'Delete Unit',
+          ),
         ],
       ),
     );
@@ -432,6 +553,147 @@ class _UnitCardState extends State<UnitCard> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class UnitEditDialog extends StatefulWidget {
+  final Unit? unit;
+
+  const UnitEditDialog({super.key, this.unit});
+
+  @override
+  State<UnitEditDialog> createState() => _UnitEditDialogState();
+}
+
+class _UnitEditDialogState extends State<UnitEditDialog> {
+  final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _nameController;
+  late final TextEditingController _specialController;
+  late UnitType _selectedType;
+  late int _attack;
+  late int _defense;
+  late int _movement;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.unit?.name ?? '');
+    _specialController = TextEditingController(text: widget.unit?.special ?? '');
+    _selectedType = widget.unit?.type ?? UnitType.infantry;
+    _attack = widget.unit?.attack ?? 3;
+    _defense = widget.unit?.defense ?? 2;
+    _movement = widget.unit?.movement ?? 2;
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _specialController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(widget.unit == null ? 'Add Unit' : 'Edit Unit'),
+      content: SingleChildScrollView(
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                controller: _nameController,
+                decoration: const InputDecoration(labelText: 'Name'),
+                validator: (value) =>
+                    value?.isEmpty ?? true ? 'Please enter a name' : null,
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<UnitType>(
+                value: _selectedType,
+                decoration: const InputDecoration(labelText: 'Type'),
+                items: UnitType.values.map((type) {
+                  return DropdownMenuItem(
+                    value: type,
+                    child: Text(type.toString().split('.').last),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  if (value != null) {
+                    setState(() {
+                      _selectedType = value;
+                    });
+                  }
+                },
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      initialValue: _attack.toString(),
+                      decoration: const InputDecoration(labelText: 'Attack'),
+                      keyboardType: TextInputType.number,
+                      onChanged: (value) {
+                        _attack = int.tryParse(value) ?? _attack;
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: TextFormField(
+                      initialValue: _defense.toString(),
+                      decoration: const InputDecoration(labelText: 'Defense'),
+                      keyboardType: TextInputType.number,
+                      onChanged: (value) {
+                        _defense = int.tryParse(value) ?? _defense;
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: TextFormField(
+                      initialValue: _movement.toString(),
+                      decoration: const InputDecoration(labelText: 'Movement'),
+                      keyboardType: TextInputType.number,
+                      onChanged: (value) {
+                        _movement = int.tryParse(value) ?? _movement;
+                      },
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _specialController,
+                decoration: const InputDecoration(labelText: 'Special Ability'),
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        TextButton(
+          onPressed: () {
+            if (_formKey.currentState?.validate() ?? false) {
+              Navigator.pop(context, {
+                'name': _nameController.text,
+                'type': _selectedType,
+                'attack': _attack,
+                'defense': _defense,
+                'movement': _movement,
+                'special': _specialController.text,
+              });
+            }
+          },
+          child: Text(widget.unit == null ? 'Add' : 'Save'),
+        ),
+      ],
     );
   }
 }
