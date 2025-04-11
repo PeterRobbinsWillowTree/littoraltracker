@@ -4,5 +4,6 @@ enum MarkerColor {
   purple,
   green,
   blue,
+  orange,
   none
 } 

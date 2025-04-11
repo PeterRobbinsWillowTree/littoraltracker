@@ -423,6 +423,7 @@ class _UnitCardState extends State<UnitCard> {
       case MarkerColor.purple: return Colors.purple;
       case MarkerColor.green: return Colors.green;
       case MarkerColor.blue: return Colors.blue;
+      case MarkerColor.orange: return Colors.orange;
       case MarkerColor.none: return Colors.transparent;
     }
   }

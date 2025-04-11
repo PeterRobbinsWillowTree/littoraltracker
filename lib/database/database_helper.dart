@@ -587,7 +587,7 @@ class DatabaseHelper {
     await db.insert(
       'units',
       {
-        'id': '${DateTime.now().millisecondsSinceEpoch}_${taskGroupId}',
+        'id': '${DateTime.now().millisecondsSinceEpoch}_$taskGroupId',
         'task_group_id': taskGroupId,
         'name': name,
         'type': type.toString().split('.').last,
