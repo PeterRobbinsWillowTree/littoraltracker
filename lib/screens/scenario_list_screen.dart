@@ -28,6 +28,7 @@ class _ScenarioListScreenState extends State<ScenarioListScreen> {
   }
 
   Future<void> _loadScenarios() async {
+    if (!mounted) return;
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -35,14 +36,18 @@ class _ScenarioListScreenState extends State<ScenarioListScreen> {
 
     try {
       final scenarioMaps = await _dbHelper.getAllScenarios();
+      if (!mounted) return;
       setState(() {
         _scenarios = scenarioMaps.map((map) => Scenario.fromMap(map)).toList();
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _errorMessage = 'Failed to load scenarios: ${e.toString()}';
       });
-    } finally {
+    }
+    
+    if (mounted) {
       setState(() {
         _isLoading = false;
       });
@@ -62,8 +67,10 @@ class _ScenarioListScreenState extends State<ScenarioListScreen> {
           faction: result['faction']!,
           description: result['description'],
         );
+        if (!mounted) return;
         await _loadScenarios();
       } catch (e) {
+        if (!mounted) return;
         setState(() {
           _errorMessage = 'Failed to create scenario: ${e.toString()}';
         });
@@ -93,8 +100,10 @@ class _ScenarioListScreenState extends State<ScenarioListScreen> {
     if (confirmed == true) {
       try {
         await _dbHelper.deleteScenario(scenario.id);
+        if (!mounted) return;
         await _loadScenarios();
       } catch (e) {
+        if (!mounted) return;
         setState(() {
           _errorMessage = 'Failed to delete scenario: ${e.toString()}';
         });
@@ -116,8 +125,10 @@ class _ScenarioListScreenState extends State<ScenarioListScreen> {
           faction: result['faction']!,
           description: result['description'],
         );
+        if (!mounted) return;
         await _loadScenarios();
       } catch (e) {
+        if (!mounted) return;
         setState(() {
           _errorMessage = 'Failed to update scenario: ${e.toString()}';
         });
@@ -128,6 +139,7 @@ class _ScenarioListScreenState extends State<ScenarioListScreen> {
   Future<void> _duplicateScenario(String scenarioId) async {
     try {
       final newScenarioId = await DatabaseHelper.instance.duplicateScenario(scenarioId);
+      if (!mounted) return;
       setState(() {
         _scenarios = _scenarios.map((s) {
           if (s.id == scenarioId) {
@@ -143,9 +155,10 @@ class _ScenarioListScreenState extends State<ScenarioListScreen> {
         }).toList();
       });
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to duplicate scenario: $e')),
-      );
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = 'Failed to duplicate scenario: $e';
+      });
     }
   }
 
@@ -155,19 +168,20 @@ class _ScenarioListScreenState extends State<ScenarioListScreen> {
       final scenario = _scenarios.firstWhere((s) => s.id == scenarioId);
       final fileName = '${scenario.name.replaceAll(' ', '_')}_${DateFormat('yyyyMMdd').format(DateTime.now())}.json';
       
-      // Create a temporary file
       final tempDir = await getTemporaryDirectory();
       final file = File('${tempDir.path}/$fileName');
       await file.writeAsString(jsonData);
       
+      if (!mounted) return;
       await Share.shareXFiles(
         [XFile(file.path)],
         text: 'Exporting scenario: ${scenario.name}',
       );
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to export scenario: $e')),
-      );
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = 'Failed to export scenario: $e';
+      });
     }
   }
 
@@ -189,22 +203,26 @@ class _ScenarioListScreenState extends State<ScenarioListScreen> {
 
         final fileContent = await File(path).readAsString();
         await DatabaseHelper.instance.importScenario(fileContent);
+        if (!mounted) return;
         await _loadScenarios();
         
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Scenario imported successfully')),
-        );
+        if (!mounted) return;
+        setState(() {
+          _errorMessage = null;
+        });
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to import scenario: $e')),
-      );
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = 'Failed to import scenario: $e';
+      });
     }
   }
 
   Future<void> _showScenarioStats(String scenarioId) async {
     try {
       final stats = await DatabaseHelper.instance.getScenarioStats(scenarioId);
+      if (!mounted) return;
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
@@ -227,10 +245,40 @@ class _ScenarioListScreenState extends State<ScenarioListScreen> {
         ),
       );
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to load statistics: $e')),
-      );
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = 'Failed to load statistics: $e';
+      });
     }
+  }
+
+  void _handleRefresh() {
+    showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Reset Database'),
+        content: const Text('This will delete all scenarios and their data. Are you sure?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Reset'),
+          ),
+        ],
+      ),
+    ).then((confirmed) async {
+      if (confirmed == true) {
+        await DatabaseHelper.instance.deleteDatabase();
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Database reset successfully')),
+        );
+        setState(() {});
+      }
+    });
   }
 
   @override
@@ -250,35 +298,7 @@ class _ScenarioListScreenState extends State<ScenarioListScreen> {
           ),
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: () async {
-              final confirmed = await showDialog<bool>(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: const Text('Reset Database'),
-                  content: const Text('This will delete all scenarios and their data. Are you sure?'),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context, false),
-                      child: const Text('Cancel'),
-                    ),
-                    TextButton(
-                      onPressed: () => Navigator.pop(context, true),
-                      child: const Text('Reset'),
-                    ),
-                  ],
-                ),
-              );
-
-              if (confirmed == true) {
-                await DatabaseHelper.instance.deleteDatabase();
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Database reset successfully')),
-                  );
-                  setState(() {});
-                }
-              }
-            },
+            onPressed: _handleRefresh,
           ),
         ],
       ),
@@ -302,7 +322,7 @@ class _ScenarioListScreenState extends State<ScenarioListScreen> {
                                   width: 40,
                                   height: 40,
                                   decoration: BoxDecoration(
-                                    color: scenario.faction == 'USMC' ? Colors.blue.withOpacity(0.1) : Colors.red.withOpacity(0.1),
+                                    color: scenario.faction == 'USMC' ? Colors.blue.withAlpha(26) : Colors.red.withAlpha(26),
                                     shape: BoxShape.circle,
                                   ),
                                   child: Icon(

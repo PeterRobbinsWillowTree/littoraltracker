@@ -57,10 +57,8 @@ class DatabaseHelper {
         task_group_id TEXT NOT NULL,
         name TEXT NOT NULL,
         type TEXT NOT NULL,
-        attack INTEGER NOT NULL,
-        defense INTEGER NOT NULL,
-        movement INTEGER NOT NULL,
         special TEXT,
+        description TEXT,
         FOREIGN KEY (task_group_id) REFERENCES task_groups (id) ON DELETE CASCADE
       )
     ''');
@@ -113,10 +111,8 @@ class DatabaseHelper {
       'task_group_id': alphaGroupId,
       'name': 'Alpha Unit 1',
       'type': 'infantry',
-      'attack': 3,
-      'defense': 2,
-      'movement': 2,
-      'special': 'None'
+      'special': 'None',
+      'description': 'Description of Alpha Unit 1'
     });
 
     final alphaUnit2Id = 'alpha_unit2_${DateTime.now().millisecondsSinceEpoch}_${DateTime.now().microsecondsSinceEpoch + 1}';
@@ -125,10 +121,8 @@ class DatabaseHelper {
       'task_group_id': alphaGroupId,
       'name': 'Alpha Unit 2',
       'type': 'armor',
-      'attack': 4,
-      'defense': 3,
-      'movement': 3,
-      'special': 'None'
+      'special': 'None',
+      'description': 'Description of Alpha Unit 2'
     });
 
     // Create units for Beta group
@@ -138,10 +132,8 @@ class DatabaseHelper {
       'task_group_id': betaGroupId,
       'name': 'Beta Unit 1',
       'type': 'infantry',
-      'attack': 3,
-      'defense': 2,
-      'movement': 2,
-      'special': 'None'
+      'special': 'None',
+      'description': 'Description of Beta Unit 1'
     });
 
     final betaUnit2Id = 'beta_unit2_${DateTime.now().millisecondsSinceEpoch}_${DateTime.now().microsecondsSinceEpoch + 3}';
@@ -150,10 +142,8 @@ class DatabaseHelper {
       'task_group_id': betaGroupId,
       'name': 'Beta Unit 2',
       'type': 'armor',
-      'attack': 4,
-      'defense': 3,
-      'movement': 3,
-      'special': 'None'
+      'special': 'None',
+      'description': 'Description of Beta Unit 2'
     });
   }
 
@@ -181,6 +171,13 @@ class DatabaseHelper {
         ADD COLUMN faction TEXT NOT NULL DEFAULT 'USMC' 
         CHECK(faction IN ('USMC', 'PLAN'))
       ''');
+
+      // Add description column to units if it doesn't exist
+      try {
+        await db.execute('ALTER TABLE units ADD COLUMN description TEXT');
+      } catch (e) {
+        // Column might already exist, ignore error
+      }
 
       // Create default scenario
       await db.insert('scenarios', {
@@ -426,10 +423,8 @@ class DatabaseHelper {
           'task_group_id': newTaskGroupId,
           'name': unit['name'],
           'type': unit['type'],
-          'attack': unit['attack'],
-          'defense': unit['defense'],
-          'movement': unit['movement'],
           'special': unit['special'],
+          'description': unit['description'],
         });
 
         // Get all markers for the unit
@@ -512,10 +507,8 @@ class DatabaseHelper {
         'task_group_id': unit['task_group_id'],
         'name': unit['name'],
         'type': unit['type'],
-        'attack': unit['attack'],
-        'defense': unit['defense'],
-        'movement': unit['movement'],
         'special': unit['special'],
+        'description': unit['description'],
       });
     }
 
@@ -578,10 +571,8 @@ class DatabaseHelper {
     required String taskGroupId,
     required String name,
     required UnitType type,
-    required int attack,
-    required int defense,
-    required int movement,
     String? special,
+    String? description,
   }) async {
     final db = await database;
     await db.insert(
@@ -591,10 +582,8 @@ class DatabaseHelper {
         'task_group_id': taskGroupId,
         'name': name,
         'type': type.toString().split('.').last,
-        'attack': attack,
-        'defense': defense,
-        'movement': movement,
         'special': special,
+        'description': description,
       },
     );
   }
@@ -603,10 +592,8 @@ class DatabaseHelper {
     required String id,
     required String name,
     required UnitType type,
-    required int attack,
-    required int defense,
-    required int movement,
     String? special,
+    String? description,
   }) async {
     final db = await database;
     await db.update(
@@ -614,10 +601,8 @@ class DatabaseHelper {
       {
         'name': name,
         'type': type.toString().split('.').last,
-        'attack': attack,
-        'defense': defense,
-        'movement': movement,
         'special': special,
+        'description': description,
       },
       where: 'id = ?',
       whereArgs: [id],

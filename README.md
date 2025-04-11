@@ -10,6 +10,7 @@ A Flutter application for tracking units and their status in wargaming scenarios
 - Import/export scenarios as JSON files
 - View scenario statistics (task groups, units, markers)
 - Assign factions (USMC or PLAN) to scenarios
+- Reset database to default state
 
 ### Task Groups
 - Create, edit, and delete task groups within scenarios
@@ -22,10 +23,8 @@ A Flutter application for tracking units and their status in wargaming scenarios
 - Customize unit properties:
   - Name
   - Type (Infantry, Armor, Artillery, Air, Naval, Logistics)
-  - Attack value
-  - Defense value
-  - Movement value
   - Special abilities
+  - Description
 - Track unit status using a 4x5 grid system
 - Place and move colored markers on the grid:
   - Black
@@ -33,10 +32,8 @@ A Flutter application for tracking units and their status in wargaming scenarios
   - Purple
   - Green
   - Blue
-- Backup and restore unit marker configurations
-
-### Markers
-- Place multiple colored markers on each grid position
+  - Orange
+- Place multiple markers on each position
 - Move markers by clicking on different positions
 - Remove markers by clicking their current position
 - Visual feedback for selected marker color
@@ -90,10 +87,8 @@ A Flutter application for tracking units and their status in wargaming scenarios
 | task_group_id | TEXT | Parent task group ID |
 | name | TEXT | Unit name |
 | type | TEXT | Unit type (infantry, armor, etc.) |
-| attack | INTEGER | Attack value |
-| defense | INTEGER | Defense value |
-| movement | INTEGER | Movement value |
 | special | TEXT | Special abilities |
+| description | TEXT | Unit description |
 
 ### Markers
 | Field | Type | Description |

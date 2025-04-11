@@ -2,9 +2,6 @@ import 'package:flutter/material.dart';
 import '../models/task_group.dart';
 import '../models/unit.dart';
 import '../database/database_helper.dart';
-import 'dart:convert';
-import 'package:path_provider/path_provider.dart';
-import 'dart:io';
 import '../models/marker_color.dart';
 
 class TaskGroupDetailScreen extends StatefulWidget {
@@ -65,10 +62,8 @@ class _TaskGroupDetailScreenState extends State<TaskGroupDetailScreen> {
           taskGroupId: widget.taskGroup.id,
           name: result['name']!,
           type: result['type']!,
-          attack: result['attack']!,
-          defense: result['defense']!,
-          movement: result['movement']!,
           special: result['special'],
+          description: result['description'],
         );
         await _loadUnits();
       } catch (e) {
@@ -91,10 +86,8 @@ class _TaskGroupDetailScreenState extends State<TaskGroupDetailScreen> {
           id: unit.id,
           name: result['name']!,
           type: result['type']!,
-          attack: result['attack']!,
-          defense: result['defense']!,
-          movement: result['movement']!,
           special: result['special'],
+          description: result['description'],
         );
         await _loadUnits();
       } catch (e) {
@@ -248,60 +241,6 @@ class _UnitCardState extends State<UnitCard> {
     }
   }
 
-  Future<void> _resetMarkers() async {
-    setState(() {
-      markers = {};
-      _errorMessage = null;
-    });
-    await _saveMarkers();
-  }
-
-  Future<void> _backupMarkers() async {
-    try {
-      final markersJson = jsonEncode(markers);
-      final directory = await getApplicationDocumentsDirectory();
-      final file = File('${directory.path}/markers_backup_${widget.unit.id}.json');
-      await file.writeAsString(markersJson);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Markers backed up successfully')),
-      );
-    } catch (e) {
-      setState(() {
-        _errorMessage = 'Failed to backup markers: ${e.toString()}';
-      });
-    }
-  }
-
-  Future<void> _restoreMarkers() async {
-    try {
-      final directory = await getApplicationDocumentsDirectory();
-      final file = File('${directory.path}/markers_backup_${widget.unit.id}.json');
-      if (await file.exists()) {
-        final markersJson = await file.readAsString();
-        final restoredMarkers = Map<int, List<MarkerColor>>.from(
-          jsonDecode(markersJson),
-        );
-        setState(() {
-          markers = restoredMarkers;
-        });
-        await _saveMarkers();
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Markers restored successfully')),
-        );
-      } else {
-        setState(() {
-          _errorMessage = 'No backup found for this unit';
-        });
-      }
-    } catch (e) {
-      setState(() {
-        _errorMessage = 'Failed to restore markers: ${e.toString()}';
-      });
-    }
-  }
-
   void _handleMarkerTap(int number) {
     setState(() {
       // First, check if the selected color exists anywhere on the card
@@ -382,15 +321,37 @@ class _UnitCardState extends State<UnitCard> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  widget.unit.name.toUpperCase(),
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
+                GestureDetector(
+                  onTap: () {
+                    showDialog(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: Text(widget.unit.name),
+                        content: SingleChildScrollView(
+                          child: Text(
+                            widget.unit.description ?? 'No description available',
+                            style: const TextStyle(fontSize: 16),
+                          ),
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text('Close'),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                  child: Text(
+                    widget.unit.name.toUpperCase(),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
                   ),
                 ),
                 Text(
-                  widget.unit.special,
+                  widget.unit.special ?? '',
                   style: const TextStyle(
                     fontSize: 12,
                     color: Colors.grey,
@@ -571,26 +532,23 @@ class _UnitEditDialogState extends State<UnitEditDialog> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _nameController;
   late final TextEditingController _specialController;
+  late final TextEditingController _descriptionController;
   late UnitType _selectedType;
-  late int _attack;
-  late int _defense;
-  late int _movement;
 
   @override
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.unit?.name ?? '');
     _specialController = TextEditingController(text: widget.unit?.special ?? '');
+    _descriptionController = TextEditingController(text: widget.unit?.description ?? '');
     _selectedType = widget.unit?.type ?? UnitType.infantry;
-    _attack = widget.unit?.attack ?? 3;
-    _defense = widget.unit?.defense ?? 2;
-    _movement = widget.unit?.movement ?? 2;
   }
 
   @override
   void dispose() {
     _nameController.dispose();
     _specialController.dispose();
+    _descriptionController.dispose();
     super.dispose();
   }
 
@@ -629,46 +587,15 @@ class _UnitEditDialogState extends State<UnitEditDialog> {
                 },
               ),
               const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextFormField(
-                      initialValue: _attack.toString(),
-                      decoration: const InputDecoration(labelText: 'Attack'),
-                      keyboardType: TextInputType.number,
-                      onChanged: (value) {
-                        _attack = int.tryParse(value) ?? _attack;
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: TextFormField(
-                      initialValue: _defense.toString(),
-                      decoration: const InputDecoration(labelText: 'Defense'),
-                      keyboardType: TextInputType.number,
-                      onChanged: (value) {
-                        _defense = int.tryParse(value) ?? _defense;
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: TextFormField(
-                      initialValue: _movement.toString(),
-                      decoration: const InputDecoration(labelText: 'Movement'),
-                      keyboardType: TextInputType.number,
-                      onChanged: (value) {
-                        _movement = int.tryParse(value) ?? _movement;
-                      },
-                    ),
-                  ),
-                ],
+              TextFormField(
+                controller: _specialController,
+                decoration: const InputDecoration(labelText: 'Attached JCC Cards'),
               ),
               const SizedBox(height: 16),
               TextFormField(
-                controller: _specialController,
-                decoration: const InputDecoration(labelText: 'Special Ability'),
+                controller: _descriptionController,
+                decoration: const InputDecoration(labelText: 'Description'),
+                maxLines: 5,
               ),
             ],
           ),
@@ -685,10 +612,8 @@ class _UnitEditDialogState extends State<UnitEditDialog> {
               Navigator.pop(context, {
                 'name': _nameController.text,
                 'type': _selectedType,
-                'attack': _attack,
-                'defense': _defense,
-                'movement': _movement,
                 'special': _specialController.text,
+                'description': _descriptionController.text,
               });
             }
           },
