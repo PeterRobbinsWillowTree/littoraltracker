@@ -1,0 +1,6 @@
+android {
+    namespace "com.example.littoraltracker"
+    compileSdkVersion flutter.compileSdkVersion
+    ndkVersion "27.0.12077973"
+    // ... existing code ...
+} 
