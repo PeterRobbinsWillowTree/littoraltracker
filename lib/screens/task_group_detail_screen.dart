@@ -413,70 +413,83 @@ class _UnitCardState extends State<UnitCard> {
   }
 
   Widget _buildTracker() {
-    return Container(
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: Colors.grey[200],
-        border: Border.all(color: Colors.grey),
-      ),
-      child: Column(
-        children: List.generate(4, (row) {
-          return Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 2),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: List.generate(5, (col) {
-                  final number = row * 5 + col + 1;
-                  return Expanded(
-                    child: GestureDetector(
-                      onTap: () => _handleMarkerTap(number),
-                      child: Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 2),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          border: Border.all(color: Colors.grey[400]!),
-                        ),
-                        child: Stack(
-                          children: [
-                            Center(
-                              child: Text(
-                                number.toString(),
-                                style: TextStyle(
-                                  color: Colors.grey[600],
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 24,
-                                ),
-                              ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Calculate the size of each cube based on the available space
+        // We want to maintain a 4x5 grid, so we'll use the smaller dimension
+        // and divide by the number of rows/columns
+        final cubeSize = (constraints.maxWidth - 20) / 5; // 5 columns, accounting for padding
+        final rowHeight = (constraints.maxHeight - 20) / 4; // 4 rows, accounting for padding
+        final finalSize = cubeSize < rowHeight ? cubeSize : rowHeight;
+        
+        return Container(
+          padding: const EdgeInsets.all(4), // Reduced padding
+          decoration: BoxDecoration(
+            color: Colors.grey[200],
+            border: Border.all(color: Colors.grey),
+          ),
+          child: Column(
+            children: List.generate(4, (row) {
+              return Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 1), // Reduced vertical padding
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: List.generate(5, (col) {
+                      final number = row * 5 + col + 1;
+                      return SizedBox(
+                        width: finalSize,
+                        height: finalSize,
+                        child: GestureDetector(
+                          onTap: () => _handleMarkerTap(number),
+                          child: Container(
+                            margin: const EdgeInsets.symmetric(horizontal: 1), // Reduced horizontal margin
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              border: Border.all(color: Colors.grey[400]!),
                             ),
-                            if (markers[number] != null)
-                              ...markers[number]!.asMap().entries.map((entry) {
-                                final index = entry.key;
-                                final color = entry.value;
-                                return Positioned(
-                                  left: 8 + (index * 12),
-                                  top: 8,
-                                  child: Container(
-                                    width: 12,
-                                    height: 12,
-                                    decoration: BoxDecoration(
-                                      color: _getMarkerColor(color),
-                                      borderRadius: BorderRadius.circular(3),
+                            child: Stack(
+                              children: [
+                                Center(
+                                  child: Text(
+                                    number.toString(),
+                                    style: TextStyle(
+                                      color: Colors.grey[600],
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: finalSize * 0.3,
                                     ),
                                   ),
-                                );
-                              }),
-                          ],
+                                ),
+                                if (markers[number] != null)
+                                  ...markers[number]!.asMap().entries.map((entry) {
+                                    final index = entry.key;
+                                    final color = entry.value;
+                                    return Positioned(
+                                      left: finalSize * 0.2 + (index * finalSize * 0.3),
+                                      top: finalSize * 0.2,
+                                      child: Container(
+                                        width: finalSize * 0.3,
+                                        height: finalSize * 0.3,
+                                        decoration: BoxDecoration(
+                                          color: _getMarkerColor(color),
+                                          borderRadius: BorderRadius.circular(finalSize * 0.1),
+                                        ),
+                                      ),
+                                    );
+                                  }),
+                              ],
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
-                  );
-                }),
-              ),
-            ),
-          );
-        }),
-      ),
+                      );
+                    }),
+                  ),
+                ),
+              );
+            }),
+          ),
+        );
+      },
     );
   }
 
