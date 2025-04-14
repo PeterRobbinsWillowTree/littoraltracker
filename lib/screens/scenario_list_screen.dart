@@ -12,6 +12,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
 // ignore: unused_import
 import 'dart:io';
+import 'dart:convert';
 
 class ScenarioListScreen extends StatefulWidget {
   const ScenarioListScreen({super.key});
@@ -194,12 +195,11 @@ class _ScenarioListScreenState extends State<ScenarioListScreen> {
   Future<void> _importScenario() async {
     try {
       final result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['json'],
+        type: FileType.any,
         allowMultiple: false,
         dialogTitle: 'Select Scenario File',
         lockParentWindow: true,
-        withData: false, // We'll read the file ourselves
+        withData: false,
         withReadStream: false,
       );
 
@@ -209,6 +209,11 @@ class _ScenarioListScreenState extends State<ScenarioListScreen> {
         
         if (path == null) {
           throw Exception('Failed to get file path');
+        }
+
+        // Check if it's a JSON file
+        if (!path.toLowerCase().endsWith('.json')) {
+          throw Exception('Please select a JSON file');
         }
 
         // Check if file exists and is readable
@@ -224,7 +229,15 @@ class _ScenarioListScreenState extends State<ScenarioListScreen> {
         }
 
         final fileContent = await fileObj.readAsString();
-        await DatabaseHelper.instance.importScenario(fileContent);
+        // Parse the JSON to modify it properly
+        final jsonData = Map<String, dynamic>.from(json.decode(fileContent));
+        // Remove the ID to let the database generate a new one
+        jsonData.remove('id');
+        // Add "(Imported)" to the name
+        jsonData['name'] = '(Imported) ${jsonData['name']}';
+        final modifiedContent = json.encode(jsonData);
+        
+        await DatabaseHelper.instance.importScenario(modifiedContent);
         if (!mounted) return;
         await _loadScenarios();
         
@@ -285,7 +298,7 @@ class _ScenarioListScreenState extends State<ScenarioListScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Reset Database'),
-        content: const Text('This will delete all scenarios and their data. Are you sure?'),
+        content: const Text('This will delete all scenarios, their data, and clear caches. Are you sure?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -299,12 +312,29 @@ class _ScenarioListScreenState extends State<ScenarioListScreen> {
       ),
     ).then((confirmed) async {
       if (confirmed == true) {
-        await DatabaseHelper.instance.deleteDatabase();
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Database reset successfully')),
-        );
-        setState(() {});
+        try {
+          // Delete the database
+          await DatabaseHelper.instance.deleteDatabase();
+          
+          // Clear temporary files
+          final tempDir = await getTemporaryDirectory();
+          if (await tempDir.exists()) {
+            await tempDir.delete(recursive: true);
+          }
+          
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Database and caches cleared successfully')),
+          );
+          
+          // Reload the scenarios list (should be empty)
+          await _loadScenarios();
+        } catch (e) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error clearing data: $e')),
+          );
+        }
       }
     });
   }
