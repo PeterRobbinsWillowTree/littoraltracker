@@ -2,10 +2,15 @@ import 'package:flutter/material.dart';
 import '../models/scenario.dart';
 import '../database/database_helper.dart';
 import 'task_group_list_screen.dart';
+// ignore: unused_import
 import 'package:intl/intl.dart';
+// ignore: unused_import
 import 'package:share_plus/share_plus.dart';
+// ignore: unused_import
 import 'package:file_picker/file_picker.dart';
+// ignore: unused_import
 import 'package:path_provider/path_provider.dart';
+// ignore: unused_import
 import 'dart:io';
 
 class ScenarioListScreen extends StatefulWidget {
@@ -164,10 +169,11 @@ class _ScenarioListScreenState extends State<ScenarioListScreen> {
 
   Future<void> _exportScenario(String scenarioId) async {
     try {
-      final jsonData = await DatabaseHelper.instance.exportScenario(scenarioId);
+      final jsonData = await _dbHelper.exportScenario(scenarioId);
       final scenario = _scenarios.firstWhere((s) => s.id == scenarioId);
       final fileName = '${scenario.name.replaceAll(' ', '_')}_${DateFormat('yyyyMMdd').format(DateTime.now())}.json';
       
+      // Save to temporary directory and share
       final tempDir = await getTemporaryDirectory();
       final file = File('${tempDir.path}/$fileName');
       await file.writeAsString(jsonData);
@@ -191,6 +197,10 @@ class _ScenarioListScreenState extends State<ScenarioListScreen> {
         type: FileType.custom,
         allowedExtensions: ['json'],
         allowMultiple: false,
+        dialogTitle: 'Select Scenario File',
+        lockParentWindow: true,
+        withData: false, // We'll read the file ourselves
+        withReadStream: false,
       );
 
       if (result != null && result.files.isNotEmpty) {
@@ -201,12 +211,27 @@ class _ScenarioListScreenState extends State<ScenarioListScreen> {
           throw Exception('Failed to get file path');
         }
 
-        final fileContent = await File(path).readAsString();
+        // Check if file exists and is readable
+        final fileObj = File(path);
+        if (!await fileObj.exists()) {
+          throw Exception('File does not exist');
+        }
+
+        // Check file size (optional safety check)
+        final fileSize = await fileObj.length();
+        if (fileSize > 1024 * 1024) { // 1MB limit
+          throw Exception('File is too large');
+        }
+
+        final fileContent = await fileObj.readAsString();
         await DatabaseHelper.instance.importScenario(fileContent);
         if (!mounted) return;
         await _loadScenarios();
         
         if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Scenario imported successfully')),
+        );
         setState(() {
           _errorMessage = null;
         });
@@ -216,6 +241,9 @@ class _ScenarioListScreenState extends State<ScenarioListScreen> {
       setState(() {
         _errorMessage = 'Failed to import scenario: $e';
       });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Import failed: $e')),
+      );
     }
   }
 
