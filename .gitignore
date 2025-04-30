@@ -124,3 +124,12 @@ migrate_working_dir/
 *.jks
 *.keystore
 keystore_info.txt
+
+# Binary files
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.ico
+*.icns
+*.webp
