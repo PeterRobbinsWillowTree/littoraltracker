@@ -178,7 +178,8 @@ class _TaskGroupDetailScreenState extends State<TaskGroupDetailScreen> with Sing
               child: SingleChildScrollView(
                 child: DataTable(
                   columnSpacing: 20,
-                  dataRowHeight: cellSize * 1.2,
+                  dataRowMinHeight: cellSize * 1.2,
+                  dataRowMaxHeight: cellSize * 1.2,
                   headingRowHeight: cellSize * 1.4,
                   columns: const [
                     DataColumn(
@@ -393,6 +394,7 @@ class _UnitCardState extends State<UnitCard> {
   final DatabaseHelper _dbHelper = DatabaseHelper.instance;
   bool _isLoading = false;
   String? _errorMessage;
+  double? _cachedCubeSize;
 
   Color _getMarkerColor(MarkerColor color) {
     switch (color) {
@@ -493,7 +495,16 @@ class _UnitCardState extends State<UnitCard> {
     
     return Container(
       padding: EdgeInsets.all(isLandscape ? 4 : 8),
-      color: Colors.black12,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Colors.blueGrey[800]!,
+            Colors.blueGrey[900]!,
+          ],
+        ),
+      ),
       child: Row(
         children: [
           Container(
@@ -590,188 +601,6 @@ class _UnitCardState extends State<UnitCard> {
     );
   }
 
-  void _showSummaryTable() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Unit Summary'),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: DataTable(
-              columns: const [
-                DataColumn(label: Text('Unit Name')),
-                DataColumn(label: Text('Description')),
-                DataColumn(label: Text('JCC Cards')),
-                DataColumn(label: Text('Black')),
-                DataColumn(label: Text('Red')),
-                DataColumn(label: Text('Purple')),
-                DataColumn(label: Text('Green')),
-                DataColumn(label: Text('Blue')),
-                DataColumn(label: Text('Orange')),
-              ],
-              rows: [
-                DataRow(
-                  cells: [
-                    DataCell(Text(widget.unit.name)),
-                    DataCell(Text(widget.unit.description ?? '')),
-                    DataCell(Text(widget.unit.special ?? '')),
-                    DataCell(_buildMarkerCell(MarkerColor.black)),
-                    DataCell(_buildMarkerCell(MarkerColor.red)),
-                    DataCell(_buildMarkerCell(MarkerColor.purple)),
-                    DataCell(_buildMarkerCell(MarkerColor.green)),
-                    DataCell(_buildMarkerCell(MarkerColor.blue)),
-                    DataCell(_buildMarkerCell(MarkerColor.orange)),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMarkerCell(MarkerColor color) {
-    bool hasMarker = false;
-    markers.forEach((position, colors) {
-      if (colors.contains(color)) {
-        hasMarker = true;
-      }
-    });
-    
-    return Container(
-      width: 24,
-      height: 24,
-      decoration: BoxDecoration(
-        color: hasMarker ? _getMarkerColor(color) : Colors.transparent,
-        border: Border.all(color: Colors.grey),
-        borderRadius: BorderRadius.circular(4),
-      ),
-    );
-  }
-
-  Widget _buildTracker() {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        // Calculate the size of each cube based on the available space and orientation
-        final isLandscape = MediaQuery.of(context).orientation == Orientation.landscape;
-        final availableWidth = constraints.maxWidth - 20; // Account for padding
-        final availableHeight = constraints.maxHeight - 20;
-        
-        // In landscape, use height as the limiting factor
-        final cubeSize = isLandscape 
-          ? (availableHeight / 4).clamp(30.0, 50.0) // 4 rows
-          : (availableWidth / 5).clamp(30.0, 50.0); // 5 columns
-        
-        return Container(
-          padding: const EdgeInsets.all(4),
-          decoration: BoxDecoration(
-            color: Colors.grey[200],
-            border: Border.all(color: Colors.grey),
-          ),
-          child: Column(
-            children: List.generate(4, (row) {
-              return Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 1),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: List.generate(5, (col) {
-                      final number = row * 5 + col + 1;
-                      return SizedBox(
-                        width: cubeSize,
-                        height: cubeSize,
-                        child: GestureDetector(
-                          onTap: () => _handleMarkerTap(number),
-                          child: Container(
-                            margin: const EdgeInsets.symmetric(horizontal: 1),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              border: Border.all(color: Colors.grey[400]!),
-                            ),
-                            child: Stack(
-                              children: [
-                                Center(
-                                  child: Text(
-                                    number.toString(),
-                                    style: TextStyle(
-                                      color: Colors.grey[600],
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: cubeSize * 0.3,
-                                    ),
-                                  ),
-                                ),
-                                if (markers[number] != null)
-                                  ...markers[number]!.asMap().entries.map((entry) {
-                                    final index = entry.key;
-                                    final color = entry.value;
-                                    return Positioned(
-                                      left: cubeSize * 0.2 + (index * cubeSize * 0.3),
-                                      top: cubeSize * 0.2,
-                                      child: Container(
-                                        width: cubeSize * 0.3,
-                                        height: cubeSize * 0.3,
-                                        decoration: BoxDecoration(
-                                          color: _getMarkerColor(color),
-                                          borderRadius: BorderRadius.circular(cubeSize * 0.1),
-                                        ),
-                                      ),
-                                    );
-                                  }),
-                              ],
-                            ),
-                          ),
-                        ),
-                      );
-                    }),
-                  ),
-                ),
-              );
-            }),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildColorSelector() {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isLandscape = MediaQuery.of(context).orientation == Orientation.landscape;
-        final selectorSize = isLandscape ? 30.0 : 40.0;
-        
-        return Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: MarkerColor.values.where((c) => c != MarkerColor.none).map((color) {
-            return GestureDetector(
-              onTap: () => setState(() => selectedColor = color),
-              child: Container(
-                width: selectorSize,
-                height: selectorSize,
-                decoration: BoxDecoration(
-                  color: _getMarkerColor(color),
-                  border: Border.all(
-                    color: selectedColor == color ? Colors.yellow : Colors.grey,
-                    width: selectedColor == color ? 2 : 1,
-                  ),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-              ),
-            );
-          }).toList(),
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Card(
@@ -797,7 +626,9 @@ class _UnitCardState extends State<UnitCard> {
               child: Column(
                 children: [
                   Expanded(
-                    child: _buildTracker(),
+                    child: RepaintBoundary(
+                      child: _buildTracker(),
+                    ),
                   ),
                   const SizedBox(height: 16),
                   _buildColorSelector(),
@@ -807,6 +638,197 @@ class _UnitCardState extends State<UnitCard> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildTracker() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (_cachedCubeSize == null) {
+          final isLandscape = MediaQuery.of(context).orientation == Orientation.landscape;
+          final availableWidth = constraints.maxWidth - 20;
+          final availableHeight = constraints.maxHeight - 20;
+          
+          _cachedCubeSize = isLandscape 
+            ? (availableHeight / 4).clamp(30.0, 50.0)
+            : (availableWidth / 5).clamp(30.0, 50.0);
+        }
+
+        return GridTracker(
+          cubeSize: _cachedCubeSize!,
+          markers: markers,
+          onMarkerTap: _handleMarkerTap,
+          getMarkerColor: _getMarkerColor,
+        );
+      },
+    );
+  }
+
+  Widget _buildColorSelector() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isLandscape = MediaQuery.of(context).orientation == Orientation.landscape;
+        final selectorSize = isLandscape ? 30.0 : 40.0;
+        
+        return ColorSelector(
+          selectedColor: selectedColor,
+          selectorSize: selectorSize,
+          onColorSelected: (color) => setState(() => selectedColor = color),
+          getMarkerColor: _getMarkerColor,
+        );
+      },
+    );
+  }
+}
+
+class GridTracker extends StatelessWidget {
+  final double cubeSize;
+  final Map<int, List<MarkerColor>> markers;
+  final Function(int) onMarkerTap;
+  final Color Function(MarkerColor) getMarkerColor;
+
+  const GridTracker({
+    super.key,
+    required this.cubeSize,
+    required this.markers,
+    required this.onMarkerTap,
+    required this.getMarkerColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: Colors.grey[200],
+        border: Border.all(color: Colors.grey),
+      ),
+      child: Column(
+        children: List.generate(4, (row) {
+          return Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 1),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: List.generate(5, (col) {
+                  final number = row * 5 + col + 1;
+                  return GridCell(
+                    number: number,
+                    cubeSize: cubeSize,
+                    markers: markers[number] ?? [],
+                    onTap: () => onMarkerTap(number),
+                    getMarkerColor: getMarkerColor,
+                  );
+                }),
+              ),
+            ),
+          );
+        }),
+      ),
+    );
+  }
+}
+
+class GridCell extends StatelessWidget {
+  final int number;
+  final double cubeSize;
+  final List<MarkerColor> markers;
+  final VoidCallback onTap;
+  final Color Function(MarkerColor) getMarkerColor;
+
+  const GridCell({
+    super.key,
+    required this.number,
+    required this.cubeSize,
+    required this.markers,
+    required this.onTap,
+    required this.getMarkerColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: cubeSize,
+      height: cubeSize,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 1),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            border: Border.all(color: Colors.grey[400]!),
+          ),
+          child: Stack(
+            children: [
+              Center(
+                child: Text(
+                  number.toString(),
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontWeight: FontWeight.bold,
+                    fontSize: cubeSize * 0.3,
+                  ),
+                ),
+              ),
+              ...markers.asMap().entries.map((entry) {
+                final index = entry.key;
+                final color = entry.value;
+                return Positioned(
+                  left: cubeSize * 0.2 + (index * cubeSize * 0.3),
+                  top: cubeSize * 0.2,
+                  child: Container(
+                    width: cubeSize * 0.3,
+                    height: cubeSize * 0.3,
+                    decoration: BoxDecoration(
+                      color: getMarkerColor(color),
+                      borderRadius: BorderRadius.circular(cubeSize * 0.1),
+                    ),
+                  ),
+                );
+              }),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class ColorSelector extends StatelessWidget {
+  final MarkerColor selectedColor;
+  final double selectorSize;
+  final Function(MarkerColor) onColorSelected;
+  final Color Function(MarkerColor) getMarkerColor;
+
+  const ColorSelector({
+    super.key,
+    required this.selectedColor,
+    required this.selectorSize,
+    required this.onColorSelected,
+    required this.getMarkerColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: MarkerColor.values.where((c) => c != MarkerColor.none).map((color) {
+        return GestureDetector(
+          onTap: () => onColorSelected(color),
+          child: Container(
+            width: selectorSize,
+            height: selectorSize,
+            decoration: BoxDecoration(
+              color: getMarkerColor(color),
+              border: Border.all(
+                color: selectedColor == color ? Colors.yellow : Colors.grey,
+                width: selectedColor == color ? 2 : 1,
+              ),
+              borderRadius: BorderRadius.circular(4),
+            ),
+          ),
+        );
+      }).toList(),
     );
   }
 }
