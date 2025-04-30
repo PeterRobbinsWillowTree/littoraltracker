@@ -119,3 +119,8 @@ coverage/
 .history
 .svn/
 migrate_working_dir/
+
+# Keystore files
+*.jks
+*.keystore
+keystore_info.txt
