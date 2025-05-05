@@ -133,3 +133,14 @@ keystore_info.txt
 *.ico
 *.icns
 *.webp
+
+# Play Store Assets
+play_store_assets/graphics/*.png
+play_store_assets/graphics/*.jpg
+play_store_assets/graphics/*.jpeg
+play_store_assets/graphics/*.gif
+play_store_assets/graphics/*.webp
+play_store_assets/graphics/*.ico
+play_store_assets/graphics/*.icns
+play_store_assets/graphics/temp/
+play_store_assets/graphics/drafts/
