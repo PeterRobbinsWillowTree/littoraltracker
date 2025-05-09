@@ -16,7 +16,7 @@ class MainApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'Littoral Commander Unit Tracker',
       theme: ThemeData(
-        primarySwatch: Colors.blue,
+        primaryColor: const Color.fromARGB(255, 0, 14, 26),
         scaffoldBackgroundColor: Colors.white,
       ),
       home: FutureBuilder(

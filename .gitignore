@@ -125,7 +125,7 @@ migrate_working_dir/
 *.keystore
 keystore_info.txt
 
-# Binary files
+# Binary files - ignore all images except those in specific directories
 *.png
 *.jpg
 *.jpeg
@@ -133,6 +133,8 @@ keystore_info.txt
 *.ico
 *.icns
 *.webp
+!assets/images/splash.jpeg
+!assets/images/icons/*
 
 # Play Store Assets
 play_store_assets/graphics/*.png

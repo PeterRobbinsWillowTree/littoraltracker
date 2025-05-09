@@ -1,4 +1,4 @@
-package com.example.littoraltracker
+package com.peterflutter.littoraltracker
 
 import io.flutter.embedding.android.FlutterActivity
 

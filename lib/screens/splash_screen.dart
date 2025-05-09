@@ -15,7 +15,7 @@ class SplashScreen extends StatelessWidget {
             SizedBox(
               width: MediaQuery.of(context).size.width * 0.8, // 80% of screen width
               child: Image.asset(
-                'assets/images/splash.png',
+                'assets/images/splash.jpeg',
                 fit: BoxFit.contain,
               ),
             ),

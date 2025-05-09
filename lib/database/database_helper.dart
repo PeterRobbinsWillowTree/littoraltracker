@@ -3,6 +3,7 @@ import 'package:path/path.dart';
 import '../models/marker_color.dart';
 import 'dart:convert';
 import '../models/unit.dart';
+import 'package:flutter/foundation.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
@@ -12,20 +13,36 @@ class DatabaseHelper {
 
   Future<Database> get database async {
     if (_database != null) return _database!;
-    _database = await _initDB('littoral_tracker.db');
-    return _database!;
+    try {
+      _database = await _initDB('littoral_tracker.db');
+      return _database!;
+    } catch (e, stack) {
+      debugPrint('Error initializing database: $e');
+      debugPrint('Stack trace: $stack');
+      rethrow;
+    }
   }
 
   Future<Database> _initDB(String filePath) async {
-    final dbPath = await getDatabasesPath();
-    final path = join(dbPath, filePath);
+    try {
+      final dbPath = await getDatabasesPath();
+      final path = join(dbPath, filePath);
+      debugPrint('Initializing database at: $path');
 
-    return await openDatabase(
-      path,
-      version: 2,
-      onCreate: _createDB,
-      onUpgrade: _upgradeDB,
-    );
+      return await openDatabase(
+        path,
+        version: 2,
+        onCreate: _createDB,
+        onUpgrade: _upgradeDB,
+        onOpen: (db) {
+          debugPrint('Database opened successfully');
+        },
+      );
+    } catch (e, stack) {
+      debugPrint('Error in _initDB: $e');
+      debugPrint('Stack trace: $stack');
+      rethrow;
+    }
   }
 
   Future<void> _createDB(Database db, int version) async {
